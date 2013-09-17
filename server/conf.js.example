@@ -1,0 +1,29 @@
+// http://stackoverflow.com/questions/5625569/include-external-js-file-in-node-js-app
+function get() {
+	return {
+	    // MySQL configuration of the client Drupal site for which an instance of the chat application will be run.
+		mysql: {
+		  host: 'localhost',
+		  user: 'root',
+		  password: 'root',
+		  database: 'drupal',
+		  prefix: ''
+		},
+		// NOTE: When the same Redis server is going to be shared by multiple chat applications, 
+		// remember to set the prefix to an unique short-string that identifies the client Drupal site.
+		// Failure to do so might result in OVERWRITING/EXPOSING of chat data which you might not want to go into.
+		// Eg. teamie:
+		redis: {
+		  host: 'localhost',
+		  port: 6379,
+		  password: 'test',
+		  prefix: '' 
+		},
+		defaultPort: 8888,
+		apiToken: "myVerySecretToken",
+		imageUrlPrefix: 'http://example.com/sites/default/files/styles/chat_profile/',
+		defaultPic: 'http://example.com/sites/default/files/user-default-pic.png'
+	};
+}
+
+module.exports.get = get;
