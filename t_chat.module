@@ -1,0 +1,30 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ */
+function t_chat_permission() {
+  return array(
+    'use chat' => array(
+      'title' => t('Use chat'),
+      'description' => t('Allows user to access the chat client.')
+    )
+  );
+}
+
+/**
+ * Implements hook_page_alter().
+ */
+function t_chat_page_alter(&$page) {
+  if (user_access('use chat')) {
+    libraries_load('angularjs');
+    libraries_load('angularjs-sanitize');
+    libraries_load('socket-io');
+    libraries_load('distime');
+    libraries_load('jquery-chosen');
+    drupal_add_js(drupal_get_path('module', 't_chat') . '/chat.js');
+    drupal_add_js(drupal_get_path('module', 't_chat') . '/utils.js');
+    drupal_add_css(drupal_get_path('module', 't_chat') . '/chat.css');
+    $page['content']['chat']['#markup'] = file_get_contents(drupal_get_path('module', 't_chat') . '/conduit.html');
+  }
+}

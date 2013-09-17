@@ -1,0 +1,369 @@
+.chat-dialog-container.chat-ready {
+  display:block !important;
+}
+.chat-dialog-container .chzn-container-multi .chzn-choices .search-field .default{
+  height:25px;
+}
+.chat-dialog-container .chzn-container-multi .chzn-choices .search-field input{
+  height:25px;
+}
+.chat-dialog-container .chzn-container-multi .chzn-results{
+  max-height:130px;
+  font-size:13px;
+}
+.chat-dialog-container .chzn-container .chzn-drop{
+  width:100% !important; /*bug in chosen, 100% width set to be window.innerWidth by js in element style, thus, override by !important*/
+}
+.chat-friend-list-menu table {
+  border-top:0px solid black ;
+  width:100%;
+  background-color:#EEEEEE;
+}
+
+.chat-friend-list-menu tr td input{
+  margin-bottom:0px;
+  width:255px;
+}
+.chat-friend-list-menu tr td i{
+  cursor: hand; cursor: pointer;
+}
+.chat-friend-list-menu tr td{
+  padding-bottom:3px;
+}
+.chat-friend-list-menu tr {
+  height:25px;
+}
+.chat-friend-list-menu{
+  border-bottom:1px solid #CCCCCC;
+}
+
+.chat-view-menu{
+  height:25px;
+}
+.chat-view-container{
+}
+
+.chat-view-menu{
+  width:100%;
+  text-align:center;
+  background-color:#EEEEEE;
+}
+.chat-label{
+  cursor: hand; cursor: pointer;
+}
+.chat-label:hover{
+  background-color:#be202e;/* MAIN_BACKGROUND_COLOR */
+}
+.chat-label.chat-label-active{
+  background-color:#be202e;/* MAIN_BACKGROUND_COLOR */
+  cursor: default; 
+}
+.block.sidebar-block-hover table .chat-dialog-title{
+  border-color: black;
+  -moz-box-shadow: 0px 0px 0px #a2a2a2;
+  -webkit-box-shadow: 0px 0px 0px #a2a2a2;
+  box-shadow: 0px 0px 0px #a2a2a2;
+  text-shadow: 0 0px 0 white;
+}
+
+table.chat-dialog-menu tbody{
+  border-top: 0px solid black;
+}
+.block.sidebar-block-hover table.chat-dialog-menu{
+
+  border-color: black;
+  -moz-box-shadow: 0px 0px 0px #a2a2a2;
+  -webkit-box-shadow: 0px 0px 0px #a2a2a2;
+  box-shadow: 0px 0px 0px #a2a2a2;
+  text-shadow: 0 0px 0 white;
+}
+#main #sidebars{
+  z-index:900;
+}
+.chat-overlay{
+  z-index:901;
+  position:relative;
+}
+table:hover{
+  box-shadow:0px 0px 0px white !important;
+}
+.img-circle {
+  -webkit-border-radius: 500px;
+  -moz-border-radius: 500px;
+  border-radius: 500px;
+}
+.chat-dialog-container.chat-dialog-container-minimized{
+  height:27px !important;
+}
+.chat-friend-list-content{
+  width:100%;
+  height:195px;
+  background-color:white;
+  overflow-y:auto;
+}
+.chat-friend-list-content.name-filter-shown{
+  height:170px;
+}
+.chat-roster-dropdown{
+  width:250px;
+  position:fixed;
+  right:10px;
+  bottom:255px;
+}
+.chat-roster-label{
+  color:grey;
+  font-weight:bold;
+
+
+}
+.chat-roster-hint{
+  color:grey;
+  width:100%;
+  font-size:11px;
+  font-style:italic;
+  text-align:center;
+
+}
+.chat-roster-overlay{
+  position: absolute;
+  width:100%;
+  display:none;
+  text-align:center;
+  padding-bottom:7px;
+  background-color:#EEEEEE;
+  border-bottom:thin solid grey;
+}
+.chat-list-item:hover{
+  box-shadow: 0 0 1px rgba(0, 0, 0, .5);
+  border-top:thin solid grey;
+  border-bottom:thin solid grey;
+
+  background: -moz-linear-gradient(left, rgba(219,219,219,0.5) 0%, rgba(0,0,0,0) 62%); /* FF3.6+ */
+  background: -webkit-gradient(linear, left top, right top, color-stop(0%,rgba(219,219,219,0.5)), color-stop(62%,rgba(0,0,0,0))); /* Chrome,Safari4+ */
+  background: -webkit-linear-gradient(left, rgba(219,219,219,0.5) 0%,rgba(0,0,0,0) 62%); /* Chrome10+,Safari5.1+ */
+  background: -o-linear-gradient(left, rgba(219,219,219,0.5) 0%,rgba(0,0,0,0) 62%); /* Opera 11.10+ */
+  background: -ms-linear-gradient(left, rgba(219,219,219,0.5) 0%,rgba(0,0,0,0) 62%); /* IE10+ */
+  background: linear-gradient(to right, rgba(219,219,219,0.5) 0%,rgba(0,0,0,0) 62%); /* W3C */
+  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#80dbdbdb', endColorstr='#00000000',GradientType=1 ); /* IE6-9 */
+
+}
+.chat-list-item div{
+  display:inline-block;
+  float:right;
+  padding-right:8px;
+}
+.chat-list-item{
+  border-bottom: 1px solid #DDDDDD;
+
+  cursor: hand; cursor: pointer;
+  padding:2px;
+  padding-left:5px;
+
+  -khtml-user-drag: element;
+}
+.chat-dialog-container input{
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+.chat-dialog-container{
+
+  position: absolute;
+  width:270px;
+  height:250px;
+  background-color:grey;
+  margin-right:10px;
+
+  bottom:0;
+  right:0;
+  position:fixed;
+
+  border: thin solid black;
+
+
+  /*border radius*/
+  -webkit-border-top-left-radius: 5px;
+  -webkit-border-top-right-radius: 5px;
+  -moz-border-radius-topleft: 5px;
+  -moz-border-radius-topright: 5px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+.chat-dialog-menu.unread-messages{
+  background-color: #ea1a2c; /* HIGHLIGHT_COLOR */
+}
+
+.chat-dialog-menu.offline:not(.unread-messages){
+  background-color:grey;
+}
+.chat-dialog-menu{
+  background-color:#be202e; /* MAIN_BACKGROUND_COLOR */
+  cursor: hand; cursor: pointer;
+  width:100%;
+
+  -webkit-border-top-left-radius: 5px;
+  -webkit-border-top-right-radius: 5px;
+  -moz-border-radius-topleft: 5px;
+  -moz-border-radius-topright: 5px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  border-bottom:solid thin black;
+}
+.chat-dialog-buttons{
+  text-align:right;
+  padding-right:5px;
+}
+div.chat-list-item.offline a.chat-user-name{
+  color:gray;
+}
+div.chat-list-item span.archive-last-message{
+  color:gray;
+}
+div.chat-list-item a.chat-user-name{
+  text-decoration: none ;
+  color:black;
+  font-size:14px;
+}
+.chat-dialog-title{
+
+  font-size:15px;
+
+  display:inline;
+  height:25px;
+  color:white;
+  font-weight: bold;
+  vertical-align:middle;
+  line-height: 25px;
+  padding-left:5px;
+
+}
+
+.chat-dialog-content{
+  width:100%;
+  height:200px;
+  background-color:white;
+  overflow-y:auto;
+  padding-bottom:2px;
+}
+.chat-dialog-container input[type="text"]{
+  margin-bottom:0px;
+  height:21px;
+  width:100%;
+  bottom:0;
+  -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box;
+}
+
+div.chat-list-item.offline .chat-profile-picture{
+  box-shadow: 0 0 4px rgba(0,0,0,.5);
+
+  filter: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'grayscale\'><feColorMatrix type=\'matrix\' values=\'0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\'/></filter></svg>#grayscale"); /* Firefox 10+, Firefox on Android */
+  filter: gray; 
+  -webkit-filter: grayscale(100%); /* Chrome 19+, Safari 6+, Safari 6+ iOS */
+  -moz-filter: grayscale(100%);
+  -ms-filter: grayscale(100%);
+  -o-filter: grayscale(100%);
+  filter: grayscale(100%);
+  /* too bad, no grayscale for Opera 12 :( */
+}
+.chat-profile-picture.online{
+  box-shadow: 0 0 0px 2px rgba(0,128,0,.5);
+}
+.chat-profile-picture{
+
+  pointer-events:none;
+  box-shadow: 0 0 2px 1px rgba(0,0,0,.5);
+  width: 20px;
+  height: 20px;
+}
+span.chat-message img{
+  width:15px;
+  height:auto;
+}
+p.chat-message img{
+  width:15px;
+  height:auto;
+}
+.chat-message{
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #333333;
+
+  width:240px;
+  padding-left: 5px;
+  word-wrap: break-word;
+  margin-bottom:0px;
+}
+.chat-message.chat-inline-picture{
+  padding-left:5px;
+  width:210px;
+}
+.chat-seperator{
+  border-top:thin solid #DDDDDD;
+  padding-top:2px;
+  padding-left:5px;
+  margin-bottom:2px;
+}
+.chat-friend-list{
+
+}
+.chat-block:hover .distime-container{
+  margin-top:-19px; /*little ugly hack to remove space left by showing time*/
+}
+.chat-block:hover .distime{
+  display:inline-block;
+}
+
+.distime{
+  display:none;
+  margin-right:2px;
+  cursor: default; 
+  background-color:#CCCCCC;
+  position:relative;
+  top:10px
+}
+
+/**
+ * KEYS.css
+ *
+ * A simple stylesheet for rendering beautiful keyboard-style elements.
+ *
+ * Author:  Michael Hüneburg
+ * Website: http://michaelhue.com/keyscss
+ * License: MIT License (see LICENSE.txt)
+ */
+
+  /* Base style, essential for every key. */
+  kbd, .key {
+    display: inline;
+    display: inline-block;
+    min-width: 1em;
+    padding: .2em .3em;
+    font: normal .85em/1 "Lucida Grande", Lucida, Arial, sans-serif;
+    text-align: center;
+    text-decoration: none;
+    -moz-border-radius: .3em;
+    -webkit-border-radius: .3em;
+    border-radius: .3em;
+    border: none;
+    cursor: default;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  kbd[title], .key[title] {
+    cursor: hand; cursor: pointer;
+  }
+
+  /* Dark style for display on light background. This is the default style. */
+  kbd, kbd.dark, .dark-keys kbd, .key, .key.dark, .dark-keys .key {
+    background: rgb(80, 80, 80);
+    background: -moz-linear-gradient(top, rgb(60, 60, 60), rgb(80, 80, 80));
+    background: -webkit-gradient(linear, left top, left bottom, from(rgb(60, 60, 60)), to(rgb(80, 80, 80)));
+    color: rgb(250, 250, 250);
+    text-shadow: -1px -1px 0 rgb(70, 70, 70);
+    -moz-box-shadow: inset 0 0 1px rgb(150, 150, 150), inset 0 -.05em .4em rgb(80, 80, 80), 0 .1em 0 rgb(30, 30, 30), 0 .1em .1em rgba(0, 0, 0, .3);
+    -webkit-box-shadow: inset 0 0 1px rgb(150, 150, 150), inset 0 -.05em .4em rgb(80, 80, 80), 0 .1em 0 rgb(30, 30, 30), 0 .1em .1em rgba(0, 0, 0, .3);
+    box-shadow: inset 0 0 1px rgb(150, 150, 150), inset 0 -.05em .4em rgb(80, 80, 80), 0 .1em 0 rgb(30, 30, 30), 0 .1em .1em rgba(0, 0, 0, .3);
+  }
+

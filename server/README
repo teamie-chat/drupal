@@ -1,0 +1,183 @@
+//I. SETUP
+a.server
+  1. Install redis
+  2. Install nodejs and server dependencies:
+      cd folder_containing_package.json
+      npm install
+  3. Update configs in nodejs server.js:
+      MYSQL_CONFIGS
+      REDIS_CONFIGS
+      SERVER_PORT (nodejs server port)
+      IMAGE_URL_PREFIX
+
+      redis port can be confided in redis.server.conf
+
+  4. Start redis-server with redis.server.conf and the nodejs server
+      redis-server redis.server.conf 
+      node server.js
+b.client
+  1. Make sure profile picture is enabled in drupal site
+  2. Make sure there are some users and groups in drupal site
+      To create 100 users belongs to 10 groups, use:
+          drush en devel devel_generate
+          drush en og og_ui og_example
+          drush genc 10 --types="group"
+          drush genu 100
+  3. Change SOCKET_SERVER to the address (with port) of nodejs server
+
+//II. DEV GUIDE
+a. Some design decisions:
+    - Each user subscribes to a room named SOCKET_USER_ROOM_FORMAT, one user may have multiple connections to the server using different tabs, browsers or devices.
+    - When a user wants to perform an action, for e.g.: send a new message, the client sends a request to the server with REQUEST_TYPE and  other data, the server will get the sender id (authorisation) by enquerying MySQL db and then process the message based on its REQUEST_TYPE. The server may enqueries Redis/MySQL server during processing the request (in this case, push the chat message to the chat log), and may subsequently send responses to needed users (again, each user may have multiple connection to the server). A response message is a JSON format string of an object having a defined RESPONSE_TYPE. Doing this will make sure all browsers tabs/devices are updated with the new messages.
+    - initData:
+      when establishing connection to the server, the client will ask for initData. The server will return a long JSON based message which has: 
+      all users details(name,id,profileImageUrl,status) in user roster
+      top 10 recent threads
+      all threads with unread messages
+      all groups the user belong to
+      user's id
+      user status (appear as offline or not)
+
+    - The server code includes:
+        *initialization
+        *sql methods to query SQL db, utility methods
+        *socketio code
+        *web service APIs
+    - The client side of chat module consists of 4 main files: chat.js, chat.css and utils.js and conduit.html
+    - The client side uses AngularJS, Socket.io and some other libraries, the common workflow is as follows:
+        * AngularJS is initialated and compiles HTML templates, it then sends a request to get init data from the server:
+            the init data returned from the server should have all data that this user usually needs to access, e.g.: all of his group,  friends name.
+        * At times, the client may send a request to a server through socketio. The message content is a JSON based string of an object, which has a REQUEST_TYPE property.
+        * The client may receive messages form the server, all message has a RESPONSE_TYPE and other data.
+        
+    - The client code is structured as follows:
+        * initialization code
+        * Define some angularJS filters and directives
+        * Define ChatController, in which the client will start socketio connection to the server and define all handlers when a message arrives.
+        * Other functions that may be called in ChatController.
+
+    - The client code keep its model as simple JS objects/variables in the memory. The chat controller scope is accessible via window.cc variable, which has:
+        *cc.threads: thread info. The array is threadId associated.
+        *cc.openThreads: keep threadId of the currently opened (visible) threads
+        *cc.users: user info. The array is user ID associated.
+        *cc.friends: an array which consists of all friends of the current users, each element is a reference to the user object. Sorted by name.
+        *cc.groups: group info, has keys name and id.
+        *cc.activeView: the friendlist has 3 tabs, friends, groups, history, this variable store the currently visible tab
+          and other variables. Friendlist is the dialog on the most right displaying user roster, btw :P 
+
+b. Feature implementation:
+    - Unread messages:
+        redis stores all unread messages of one user in the hash USER_UNREAD_THREADS_FORMAT, each key (threadId) matchs with the number of unread messages.
+        when a new message comes, the thread dialog title will be highlighted. If user is focusing on the thread chat textbox, markAsRead is automatically called. If not, he will see the highlighted thread dialog and when clicking on it, the event handler will calls markAsRead.
+        This markAsRead method asks the server to remove numUnreadMessages in the hash USER_UNREAD_THREADS_FORMAT and notify other connections. There are 2 reasons to do this: 1. if user acknowledges that he has read the new messages, all other tabs should not show new message notification. 2. If user doesn't mark the thread as read, he will see the new message automatically the next time he connect to chat server.
+    - Archive:
+        redis keeps track of user most recent thread by having a sorted set in USER_THREADS_FORMAT, with thread title as key and latest message time as score. The sorted set is updated whenever a new message is sent.
+        the client side keep track of oldestRecentThreadTime and makes sure all thread more recent than this time is kept in the cache: InitData contains 10 most recent threads of users, each with its last message (for preview purpose in archive tab). When a new message comes, a thread time is updated and thus the archive changes.
+    - Offline mode:
+        isChatOffline indicates if user opts for offline mode. The offline status is also stored in redis so when user opens a new tab, he doesn't go online.
+        when isChatOffline is set to true, the client still connects to the server and keeps receiving new messages, but it doesn't display to users, and the user's status appears as offline in his friends' roster list. The user can thus still see new messages indicated in the tab title, while there is no pop up that annoy him/her.
+
+c. Testing:
+    - Testing: we can build a client to send different requests to the servers and make test cases in this client. As what I can think of now, socket.io test cases should be written in asynchronous style and there shoud be multiple clients (at least 3 ) participating in testing phase. For e.g: client A initiates a multi-user thread with B and C, client B should get the message from the server, if not, this test case fails.
+       some operations can be tested by just en-querying the redis database, after sending request to the server, to verify that correct data has been written. There is no javascript redis client that runs in browsers AFAIK, but building a nodejs server to forward requests from client to redis, and forward results back to client, should be simple. 
+    - Front end testing is done manually, I think :P
+    - Performance test: write a simple client which keep sending message to the server and see how many messages can be handled by the server per second. This can be used to determine if the server can bear the desired bandwidth load. Note that in many cases, if 10 clients has open connections to the server, one test request messages sent to the server will lead to 10 response messages. The server will print out to console whenever it send something using socket.io, which can be used to count it's load handling capability
+    
+d. Customize css color:
+  - change the 2 color in chat.css to match new theme:
+    MAIN_BACKGROUND_COLOR
+    HIGHLIGHT_COLOR (used when there is unread messages, I personally prefer to change lightness of main color in HSL)
+    
+    depending on the color selected, you may need to change the Twitter bootstrap icons on the dialog title bar to white color (add color-white class to element i)
+
+e. APIs List
+  - For development ease, I set window.cc = $scope. All functions defined by $scope.[functionName] = new function(){} are accessible via cc global variable.
+  - All major functions in chat.js:
+    *initThread(threadId,users): if the thread with threadId doesn't not present in the cache, create one. 
+      users: optional - used when initializing multiuser thread
+    *openThread(threadId,oldThreadIndex,users): call initThread and open it (make it visible to users). List of all visible threads are kept in cc.openThreads
+      oldThreadIndex:  if present, will close the thread at oldThreadIndex in openThread and replace it by this one. Example use case: a one-one chat thread can be replaced by a multiuser thread if the user add his/her friend to this thread
+
+    *openThreadAndFocus(): call openThread and set focusThread to this threadId, when $apply scans the model for changes, it will eventually focus the chat textbox which belongs to this threadID. Note that not all threads in openThreads are displayed, depending on whether the screen width is enough to display those dialogs. Function getDisplayedThreads is used to get final visible threads, MAX_DISPLAYED_THREADS is changed whenever users resizes the screen.
+
+    *openOneOneThread(receiverId): calls openThreadAndFocus to open a 1.1.thread with receiverId
+    *openGroupThread(groupId): calls openThreadAndFocus to open a group.thread with groupID
+    *closeThread(threadId): to remove the threadId from cc.openThreads, thread details are still stored in cc.thread.
+    *toggleThread(threadId): to toggle minimized/normal state of a thread dialog
+    *addFriendtoThread(threadId,userIds): to add more users to a thread;
+    *leaveThread(threadId): to leave a multiuserthread which the logged in user is participating in.
+
+    *getThreadReceiver(threadId): get thread receiver. Each thread in cc.threads has the property sendTo. In 1.1.thread: sendTo is the other user's id,  in group.thread: sendTo is the groupId, multiUserThread: sendTo is the Multiuser threadIdNumber.
+
+    *getThreadTypeFromId(threadId): threadId is a string from which we can derive thread type. String doesn't affect redis performance so we don't have to use Id numbers, and string is actually de-normalized data :)
+      
+    *getUsersDetails(userIds): to get user's details from the server. For e.g.: if B add C form multiuserThread with A, A will need to enquery the server if C is not his friend. All users details are requested once, if userDetailsRequestRecords[userId] is set to true, his/her details will not be requested again. 
+      if user C is not in the cache of user A, the multithreadTitle will be displayed to A as: "B, loading... and me". When the server responses this request, the thread title will be updated to "B,C and me" by adding C to cc.users and invoking $apply.
+
+    *checkUserCache(userIds): check if userIds are in the cache, if not call getUserDetails.
+
+    *isFirstInSection(index,messages): check if the messages is first in its blocks. All messages displayed to users are separated into blocks, if 2 messages are sent too near to each other and have the same author, they are in the same block. 
+      at the beginning of each block, we have a separator and a profile image of the sender
+
+    *lazyApply(): hmm, I should have changed this method.
+      thread message is an exception when binding view and model in our t_chat module. Since the number of messages is large, it is inefficient to scan the whole model every time a new message comes. At first, the strategies is to check if cc.needApply is set to true and scan the model every 200ms.
+      I have changed the binding strategy to check the thread messages.length because messages are all readonly and can only be added, not removed. So the delayed-apply strategy is not needed anymore.
+
+    *hese methods send corresponding requests to the server, it's pretty straightforward to read and see what they do:
+    
+      markThreadAsRead(threadId)
+      getRecentThreads()
+      getOldMessages():
+      setChatOffline()
+      sendMessage();
+       
+    *iosocket.on('message', function(message) {}): this function set various event handlers when a new message from the servers arrives, depending on msg.RESPONSE_TYPE in switch statement. Most of message handlers are wrapped in $apply function.
+    
+    *other functions are either ultility or unimportant ones
+  
+f. Web service APIs list:
+
+  - to get all threads of a user, in most recent order:
+    teamie.dev:8888/api/recentThreads
+    userId:1
+    token: API_TOKEN (as defined in server.js)
+
+  - to get MAX_WEB_SERVICES_MESSAGES_PER_REQUEST in most recent order of a thread, support offset
+    teamie.dev:8888/api/chatlog
+    tid: 1.1.thread:1:2831
+    offset: 0 or positive integer
+    token: API_TOKEN (as defined in server.js)
+
+III. Current shortcomings and further optimization
+    I made some research before coming to my design decision. There are, however, many good places to improve in my design but due to my limited time and experiences, implementation is not possible. It's always easier said than done - yeah, admit it :p
+
+    - the current design writes to redis and reads from MySQL to get user roster, token etc., . Thus, it writes de-normalized data and reads from MYSQL utilizing MySQL query cache. This design is simple to implement while having some decent performance. That said, we can do better. It is possible to keep user roster, groups etc., in the redis db and update that data using drupal hook.
+
+    - all friends details are sent to client side at initdata. The init data is thus large and can be compressed first before sending to the client. We can send just a part of friends details to the client side, but searching in roster list will suffer. Building a search index may helps improve performance.
+    - if two or more messages are sent near to each other (i.e. in the same message block), they can be combined to one single message. This improve space usage and general performance. Can be implemented as a scheduled task on redis server.
+    - redis data can be compressed: http://redis.io/topics/memory-optimization
+    - redis persistence can be tweaked: http://redis.io/topics/persistence
+    - distributed redis: http://redis.io/topics/partitioning. 
+    - One note is redis doesn't not come with any good authorisation mechaism. It is possible to set a password string in redis (by editting the config file), but due to its fast nature, many passwords can be tested by the attacking client in a short time. Thus, it's not recommended to expose redis like what we usually do for mysql. We can, however, set up a firewall to prevent such attack, read http://redis.io/topics/security
+    - detect unsupported client: the current implementation will load chat module regardless if the browsers support all features it requires. Modenizerjs can be used to detect this. 
+      all these CSS3 properties are optional and don't severely affect the look of chat module:
+        border-radius
+        box-shadow
+        rgba()
+        text-shadow
+        css gradient
+
+    - some other good reads: 
+        https://github.com/LearnBoost/Socket.IO/wiki/Configuring-Socket.IO
+        https://moot.it/blog/technology/redis-as-primary-datastore-wtf.html
+    - features suggestion: 
+      * visual hint to let users know that they can drag/drop friends to form multiuser thread. If a friend is already in a thread, users should know that they cant drop to that thread.
+      * display: "messsage is read", "user typing status"
+      * multi line textbox support
+      * when there are too many chat dialogs (cc.openThreads), some will be hidden. Display a little icon to let user open hidden dialogs, and indicates how many new message there.
+      * when a thread is minimized, its width can be reduced to allow more opened dialogs
+      * sound notification
+
+ 
+
+
