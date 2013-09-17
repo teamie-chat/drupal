@@ -5,16 +5,16 @@
 // TODO Decouple node server config and have a way by which it can be GENERATED for a given site.
 // TODO Disable logging to the console unless when in debug mode.
 
-(function($, angular, io, ccScope){
+var chatClient = (function($, angular, io, ccScope) {
   var iosocket, myId, imgUrlPrefix,userDetailsRequestRecords = [];
   var THREAD_TYPE = {
     oneOneThread: 1,
     multiuserThread: 2,
     groupThread: 3
   },
-  SOCKET_SERVER = "http://chat.example.com:8888",
-  ONE_ONE_THREAD_FORMAT = "1.1.thread:{0}:{1}",
-  GROUP_THREAD_FORMAT = "group.thread:{0}",
+  SOCKET_SERVER = Drupal.settings.teamieChat.serverUrl,
+  ONE_ONE_THREAD_FORMAT = Drupal.settings.teamieChat.redisPrefix + "1.1.thread:{0}:{1}",
+  GROUP_THREAD_FORMAT = Drupal.settings.teamieChat.redisPrefix + "group.thread:{0}",
   NUM_OLD_MESSAGES_PER_REQUEST = 50,
 
   REQUEST_TYPE = {
@@ -1268,9 +1268,9 @@
     groupId for group.thread
     threadId for multiuser.thread*/
     $scope.getThreadTypeFromId = function(threadId) {
-      if (threadId.match("^1\.1\.thread:[0-9]{1,}:[0-9]{1,}")) return THREAD_TYPE.oneOneThread;
-      else if (threadId.match("^group\.thread:[0-9]{1,}")) return THREAD_TYPE.groupThread;
-      else if (threadId.match("^multiuser\.thread:[0-9]{1,}")) return THREAD_TYPE.multiuserThread;
+      if (threadId.match("1\.1\.thread:[0-9]{1,}:[0-9]{1,}")) return THREAD_TYPE.oneOneThread;
+      else if (threadId.match("group\.thread:[0-9]{1,}")) return THREAD_TYPE.groupThread;
+      else if (threadId.match("multiuser\.thread:[0-9]{1,}")) return THREAD_TYPE.multiuserThread;
       else return - 1;
     };
 
@@ -1317,5 +1317,15 @@
   },
   ]);
   //END OF CHAT CONTROLLER
-})(jQuery, angular, io)
+});
 
+(function($) {
+  Drupal.behaviors.teamieChat = {
+    attach: function(context, settings) {
+      jQuery('body').once('chat-client', function() {
+        // Run the chat client.
+        chatClient($, angular, io);
+      });
+    }
+  };
+})(jQuery);

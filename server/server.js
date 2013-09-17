@@ -1,37 +1,51 @@
-// @TODO De-couple MYSQL, Redis config to different files so that they may be specified as command-line options as well.
 // @TODO Move image style, default profile image logic to the client as it's dependent less on the server and more on the connecting Drupal site.
 // @TODO Upload emoticons.
 // @TODO Move HTTP request handlers and API (DB and otherwise) methods to different files (api.js/http.js) so that they can be maintained easily and independently.
 
-var SERVER_DEFAULT_PORT = 8888;
-var MYSQL_CONFIGS = {
-  host: 'localhost',
-  user: 'root',
-  password: 'root',
-  database: 'drupal',
-  prefix: ''
-};
-var IMAGE_URL_PREFIX = "http://example.com/sites/default/files/styles/chat_profile/";
-var DEFAULT_PROFILE_IMAGE_URL = "http://example.com/sites/default/files/user-default-pic.png";
-var REDIS_CONFIGS = {
-    host: 'localhost',
-    port: 6379,
-    password: 'test',
-    prefix: '' 
-}
-var API_TOKEN = "myVerySecretToken";
+var DEFAULT_CONFIG_FILE = './conf.js';
 
-var ONE_ONE_THREAD_FORMAT = REDIS_CONFIGS.prefix + "1.1.thread:%d:%d";
-var GROUP_THREAD_FORMAT = REDIS_CONFIGS.prefix + "group.thread:%d";
-var MULTIUSER_THREAD_MSG_FORMAT = REDIS_CONFIGS.prefix + "multiuser.thread:%d";
-var MULTIUSER_THREAD_USER_FORMAT = REDIS_CONFIGS.prefix + "multiuser.thread:%d:users";
-var USER_UNREAD_THREADS_FORMAT = REDIS_CONFIGS.prefix + "user:%d:unread.threads";
-var USER_THREADS_FORMAT = REDIS_CONFIGS.prefix + "user:%d:threads"; //all user threads in time order
-var USER_ACTIVE_THREADS = REDIS_CONFIGS.prefix + "user:%d:active.threads";
-var MULTIUSER_THREAD_ID_GENERATOR = REDIS_CONFIGS.prefix + "multiuser.thread:id";
-var USER_ACTIVE_THREADS_KEY = REDIS_CONFIGS.prefix + "user:%d:active.thread";
-var SOCKET_USER_ROOM_FORMAT = REDIS_CONFIGS.prefix + "user:%d";
-var USER_OFFLINE_STATUS = REDIS_CONFIGS.prefix + "user:%d:offline.status";
+var stdio = require('stdio'), 
+ _ = require('underscore'),
+ fs = require('fs');
+
+var opts = stdio.getopt({
+	'port': {
+		key: 'port',
+		args: 1,
+		description: 'The port on which you\'d want the server to run from.'
+	},
+	'conf': {
+		key: 'conf',
+		args: 1,
+		description: 'Path to the configuration file. Defaults to ' + DEFAULT_CONFIG_FILE + '.'
+	}
+});
+
+var confFile = opts.conf ? opts.conf : DEFAULT_CONFIG_FILE;
+if (!fs.existsSync(confFile)) {
+	throw new Error('The configuration file could not be found at ' + confFile);
+}
+
+var conf = require(confFile).get();
+
+// @TODO Validate configuration and exit early if invalid.
+
+var port = opts.port ? opts.port : conf.defaultPort;
+if (!_.isFinite(port)) {
+	throw new Error('Server port must be an integer.');
+}
+
+var ONE_ONE_THREAD_FORMAT = conf.redis.prefix + "1.1.thread:%d:%d";
+var GROUP_THREAD_FORMAT = conf.redis.prefix + "group.thread:%d";
+var MULTIUSER_THREAD_MSG_FORMAT = conf.redis.prefix + "multiuser.thread:%d";
+var MULTIUSER_THREAD_USER_FORMAT = conf.redis.prefix + "multiuser.thread:%d:users";
+var USER_UNREAD_THREADS_FORMAT = conf.redis.prefix + "user:%d:unread.threads";
+var USER_THREADS_FORMAT = conf.redis.prefix + "user:%d:threads"; //all user threads in time order
+var USER_ACTIVE_THREADS = conf.redis.prefix + "user:%d:active.threads";
+var MULTIUSER_THREAD_ID_GENERATOR = conf.redis.prefix + "multiuser.thread:id";
+var USER_ACTIVE_THREADS_KEY = conf.redis.prefix + "user:%d:active.thread";
+var SOCKET_USER_ROOM_FORMAT = conf.redis.prefix + "user:%d";
+var USER_OFFLINE_STATUS = conf.redis.prefix + "user:%d:offline.status";
 
 var THREAD_TYPE = {
   oneOneThread: 1,
@@ -72,44 +86,28 @@ var RESPONSE_TYPE = {
   updateOfflineStatus: 11
 };
 
-var fs = require('fs'),
-express = require('express'),
+var express = require('express'),
 app = express(),
 http = require('http'),
-_ = require('underscore'),
 _s = require('underscore.string'),
 socketio = require('socket.io'),
 redis = require('redis'),
 cookie = require('cookie'),
-mysql = require('mysql'),
-stdio = require('stdio');
-
-var opts = stdio.getopt({
-	'port': {
-		key: 'port',
-		args: 1,
-		description: 'The port in which you want to server to run from'
-	}
-});
-
-var port = opts.port ? opts.port : SERVER_DEFAULT_PORT;
-if (!_.isFinite(port)) {
-	throw new Error('Server port must be an integer.');
-}
+mysql = require('mysql');
 
 app.use(express.bodyParser());
 
 // Connect to Redis.
-var redisClient = redis.createClient(REDIS_CONFIGS.port,REDIS_CONFIGS.host,{no_ready_check: true});
+var redisClient = redis.createClient(conf.redis.port,conf.redis.host,{no_ready_check: true});
 redisClient.on("error", function(err) {
   console.log("Redis Error " + err);
 });
-redisClient.auth(REDIS_CONFIGS.password, function() {
+redisClient.auth(conf.redis.password, function() {
     console.log('Redis client connected');
 });
 
 // Connect to MySQL.
-mysqlConn = mysql.createConnection(MYSQL_CONFIGS);
+mysqlConn = mysql.createConnection(conf.mysql);
 mysqlConn.connect();
 
 // Start the HTTP server.
@@ -141,7 +139,7 @@ var getUserId = function(cookieString, callback) {
     if (sidToken === null) {
       callback( - 1);
     } else {
-      mysqlConn.query(_s.sprintf('SELECT uid FROM %ssessions WHERE sid = ?',MYSQL_CONFIGS.prefix), [sidToken], function(err, results) {
+      mysqlConn.query(_s.sprintf('SELECT uid FROM %ssessions WHERE sid = ?',conf.mysql.prefix), [sidToken], function(err, results) {
         if (err) console.log("MySQL error" + err);
         else {
           callback(results.length !== 1 ? - 1: results[0].uid);
@@ -154,14 +152,13 @@ var getUserId = function(cookieString, callback) {
 };
 
 //to check if a user belongs to a thread
-var isUserInThread = function(userId, threadId,callback){
-  var re = _s.sprintf("^(1.1.thread:[0-9]{1,}:%d|1.1.thread:%d:[0-9]{1,})$",userId,userId);
+var isUserInThread = function(userId, threadId, callback) {
+  var re = _s.sprintf("^" + conf.redis.prefix + "(1.1.thread:[0-9]{1,}:%d|1.1.thread:%d:[0-9]{1,})$",userId,userId);
   re = new RegExp(re);
   if (re.exec(threadId)){
     callback(true);
   };
-
-  if (threadId.match("^group\.thread:[0-9]{1,}")){
+  if (threadId.match("^" + conf.redis.prefix + "group\.thread:[0-9]{1,}")){
     var groupId = threadId.match(":[0-9]{1,}")[0].replace(":", "");
     groupId = parseInt(groupId);
     getGroupMembers(groupId,function(groupMemberIds){
@@ -170,11 +167,10 @@ var isUserInThread = function(userId, threadId,callback){
           callback(true);
         }
       }
-
       callback(false);
     });
-
-  }else if (threadId.match("^multiuser\.thread:[0-9]{1,}")){
+  }
+  else if (threadId.match("^" + conf.redis.prefix + "multiuser\.thread:[0-9]{1,}")){
     var threadIdNum = threadId.match(":[0-9]{1,}")[0].replace(":", "");
     threadIdNum = parseInt(threadIdNum);
     var threadRedisKey = _s.sprintf(MULTIUSER_THREAD_USER_FORMAT, threadIdNum);
@@ -184,6 +180,7 @@ var isUserInThread = function(userId, threadId,callback){
     });
   }
 }
+
 //to remove threads from user's records
 var removeThreads = function(userId,threadIds, callback) {
   if(typeof threadIds === "number") threadIds = [threadIds];
@@ -209,7 +206,7 @@ var hasConnection = function(senderId, receiverIds, callback) {
     receiverIds = [receiverIds];
   }
   if (receiverIds.length>0){
-    var sqlQueryFormat = _s.sprintf("SELECT count(distinct users.uid) as count FROM %susers users INNER JOIN %sog_membership og_membership_users ON users.uid = og_membership_users.etid AND og_membership_users.entity_type = 'user' AND og_membership_users.state = 1 WHERE (((users.status <> '0')) AND (((og_membership_users.gid IN (SELECT gid FROM %sog_membership om WHERE entity_type = 'user' AND etid = ? AND state = 1)) AND ((users.uid in (?))))))",MYSQL_CONFIGS.prefix, MYSQL_CONFIGS.prefix, MYSQL_CONFIGS.prefix);
+    var sqlQueryFormat = _s.sprintf("SELECT count(distinct users.uid) as count FROM %susers users INNER JOIN %sog_membership og_membership_users ON users.uid = og_membership_users.etid AND og_membership_users.entity_type = 'user' AND og_membership_users.state = 1 WHERE (((users.status <> '0')) AND (((og_membership_users.gid IN (SELECT gid FROM %sog_membership om WHERE entity_type = 'user' AND etid = ? AND state = 1)) AND ((users.uid in (?))))))",conf.mysql.prefix, conf.mysql.prefix, conf.mysql.prefix);
     mysqlConn.query(sqlQueryFormat, [senderId, receiverIds], function(err, results) {
       if (err) console.log("MySQL error" + err);
       else {
@@ -261,7 +258,7 @@ var getRecentThreads = function(userId, time, callback) {
 };
 
 var getUserGroups = function(userId, callback) {
-  var sqlQueryFormat = _s.sprintf("SELECT DISTINCT node.nid AS groupId, node.title as name FROM %snode node INNER JOIN %sog og_node ON node.nid = og_node.etid AND og_node.entity_type = 'node' INNER JOIN %sog_membership og_membership_og ON og_node.gid = og_membership_og.gid WHERE (( (node.status = '1') AND (og_membership_og.etid = '?') )AND(( (og_membership_og.entity_type IN  ('user')) AND (og_membership_og.state IN  ('1')) ))) ",MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix);
+  var sqlQueryFormat = _s.sprintf("SELECT DISTINCT node.nid AS groupId, node.title as name FROM %snode node INNER JOIN %sog og_node ON node.nid = og_node.etid AND og_node.entity_type = 'node' INNER JOIN %sog_membership og_membership_og ON og_node.gid = og_membership_og.gid WHERE (( (node.status = '1') AND (og_membership_og.etid = '?') )AND(( (og_membership_og.entity_type IN  ('user')) AND (og_membership_og.state IN  ('1')) ))) ",conf.mysql.prefix,conf.mysql.prefix,conf.mysql.prefix);
 
   mysqlConn.query(sqlQueryFormat, [userId], function(err, results) {
     if (err) console.log("MySQL error" + err);
@@ -271,7 +268,7 @@ var getUserGroups = function(userId, callback) {
   });
 };
 var getUsersDetails = function(userIds, callback) {
-  var sqlQueryFormat = _s.sprintf("SELECT DISTINCT users.uid as userId, if(realname.realname LIKE '', users.name, realname.realname) as name, file_managed.uri as image FROM %susers users INNER JOIN %sog_membership og_membership_users ON users.uid = og_membership_users.etid AND og_membership_users.entity_type = 'user' LEFT JOIN %srealname realname ON users.uid = realname.uid LEFT JOIN %sfile_managed file_managed ON users.picture = file_managed.fid WHERE ((users.status <> '0') AND (etid in (?)))",MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix);
+  var sqlQueryFormat = _s.sprintf("SELECT DISTINCT users.uid as userId, if(realname.realname LIKE '', users.name, realname.realname) as name, file_managed.uri as image FROM %susers users INNER JOIN %sog_membership og_membership_users ON users.uid = og_membership_users.etid AND og_membership_users.entity_type = 'user' LEFT JOIN %srealname realname ON users.uid = realname.uid LEFT JOIN %sfile_managed file_managed ON users.picture = file_managed.fid WHERE ((users.status <> '0') AND (etid in (?)))",conf.mysql.prefix,conf.mysql.prefix,conf.mysql.prefix,conf.mysql.prefix);
 
   mysqlConn.query(sqlQueryFormat, [userIds], function(err, results) {
     if (err) console.log("MySQL error" + err);
@@ -284,7 +281,7 @@ var getUsersDetails = function(userIds, callback) {
   });
 };
 var getUserRoster = function(userId, callback) {
-  var sqlQueryFormat = _s.sprintf("SELECT DISTINCT users.uid as userId, if(realname.realname LIKE \"\",users.name,realname.realname) as name,file_managed.uri as image FROM %susers users INNER JOIN %sog_membership og_membership_users ON users.uid = og_membership_users.etid AND og_membership_users.entity_type = 'user' LEFT JOIN %srealname realname ON users.uid = realname.uid LEFT JOIN %sfile_managed file_managed ON users.picture = file_managed.fid WHERE (((users.status <> '0')) AND (((og_membership_users.gid IN (SELECT gid from %sog_membership where etid = ?))))) ",MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix);
+  var sqlQueryFormat = _s.sprintf("SELECT DISTINCT users.uid as userId, if(realname.realname LIKE \"\",users.name,realname.realname) as name,file_managed.uri as image FROM %susers users INNER JOIN %sog_membership og_membership_users ON users.uid = og_membership_users.etid AND og_membership_users.entity_type = 'user' LEFT JOIN %srealname realname ON users.uid = realname.uid LEFT JOIN %sfile_managed file_managed ON users.picture = file_managed.fid WHERE (((users.status <> '0')) AND (((og_membership_users.gid IN (SELECT gid from %sog_membership where etid = ?))))) ",conf.mysql.prefix,conf.mysql.prefix,conf.mysql.prefix,conf.mysql.prefix,conf.mysql.prefix);
 
   mysqlConn.query(sqlQueryFormat, [userId], function(err, results) {
     if (err) console.log("MySQL error" + err);
@@ -299,7 +296,7 @@ var getUserRoster = function(userId, callback) {
 };
 var getGroupMembers = function(groupId, callback) {
   groupId = parseInt(groupId,10);
-  var sqlQueryFormat = _s.sprintf("SELECT DISTINCT users.uid AS uid FROM %susers users INNER JOIN %sog_membership og_membership_users ON users.uid = og_membership_users.etid AND og_membership_users.entity_type = 'user' INNER JOIN %sog og_og_membership ON og_membership_users.gid = og_og_membership.gid WHERE (( (og_og_membership.entity_type = 'node') AND (og_og_membership.etid = '?' ) )) ",MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix,MYSQL_CONFIGS.prefix);
+  var sqlQueryFormat = _s.sprintf("SELECT DISTINCT users.uid AS uid FROM %susers users INNER JOIN %sog_membership og_membership_users ON users.uid = og_membership_users.etid AND og_membership_users.entity_type = 'user' INNER JOIN %sog og_og_membership ON og_membership_users.gid = og_og_membership.gid WHERE (( (og_og_membership.entity_type = 'node') AND (og_og_membership.etid = '?' ) )) ",conf.mysql.prefix,conf.mysql.prefix,conf.mysql.prefix);
 
   mysqlConn.query(sqlQueryFormat, [groupId], function(err, results) {
     if (err) {
@@ -371,9 +368,9 @@ sio.on('connection', function(client) {
   }
 
   var getThreadTypeFromId = function(threadId) {
-    if (threadId.match("^1\.1\.thread:[0-9]{1,}:[0-9]{1,}")) return THREAD_TYPE.oneOneThread;
-    else if (threadId.match("^group\.thread:[0-9]{1,}")) return THREAD_TYPE.groupThread;
-    else if (threadId.match("^multiuser\.thread:[0-9]{1,}")) return THREAD_TYPE.multiuserThread;
+    if (threadId.match("^" + conf.redis.prefix + "1\.1\.thread:[0-9]{1,}:[0-9]{1,}")) return THREAD_TYPE.oneOneThread;
+    else if (threadId.match("^" + conf.redis.prefix + "group\.thread:[0-9]{1,}")) return THREAD_TYPE.groupThread;
+    else if (threadId.match("^" + conf.redis.prefix + "multiuser\.thread:[0-9]{1,}")) return THREAD_TYPE.multiuserThread;
     else return - 1;
   };
 
@@ -588,8 +585,8 @@ sio.on('connection', function(client) {
                             responseMsg.isChatOffline = {"true":true,"false":false,nil:false}[result];
                             //TODO: can get threads details here instead
                             responseMsg.threads = {};
-                            responseMsg.imgUrlPrefix = IMAGE_URL_PREFIX;
-                            responseMsg.defaultProfileImgUrl = DEFAULT_PROFILE_IMAGE_URL;
+                            responseMsg.imgUrlPrefix = conf.imageUrlPrefix;
+                            responseMsg.defaultProfileImgUrl = conf.defaultPic;
                             client.send(JSON.stringify(responseMsg));
                           })
                         });
@@ -885,7 +882,7 @@ app.post('/api/recentThreads', function(req, res) {
   var token = req.body.token,
     uid = req.body.userId;
 
-  if(token === API_TOKEN){
+  if(token === conf.apiToken){
     if (isFinite(uid) && !isNaN(uid)){
       uid = parseInt(uid);
       getRecentThreads(uid,new Date().getTime() + 480,function(threads){
@@ -913,7 +910,7 @@ app.post('/api/chatlog', function(req, res) {
     res.send("Invalid offset or tid");
   }
 
-  if(token === API_TOKEN){
+  if(token === conf.apiToken){
     var start = offset;
     var end = offset + MAX_WEB_SERVICE_MESSAGES_PER_REQUEST;
     redisClient.lrange(tid,start,end, function(err, messages) {

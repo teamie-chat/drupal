@@ -17,6 +17,12 @@ function t_chat_permission() {
  */
 function t_chat_page_alter(&$page) {
   if (user_access('use chat')) {
+    drupal_add_js(array(
+      'teamieChat' => array(
+        'serverUrl' => variable_get('t_chat_server_url', 'http://chat.example.com:8888'),
+        'redisPrefix' => variable_get('t_chat_redis_prefix', '')
+      )
+    ), array('type' => 'setting'));
     libraries_load('angularjs');
     libraries_load('angularjs-sanitize');
     libraries_load('socket-io');
