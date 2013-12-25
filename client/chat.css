@@ -307,20 +307,29 @@ p.chat-message img{
 .chat-friend-list{
 
 }
-.chat-block:hover .distime-container{
-  margin-top:-19px; /*little ugly hack to remove space left by showing time*/
+
+.chat-block:hover .timeago-container {
+  margin-top:-19px; /* little ugly hack to remove space left by showing time */
 }
-.chat-block:hover .distime{
+
+.chat-block .timeago {
+  display: none;
+  margin-right: 2px;
+  cursor: default;
+  position: relative;
+  top: 10px;
+}
+
+.chat-block:hover .timeago {
   display:inline-block;
 }
 
-.distime{
-  display:none;
-  margin-right:2px;
-  cursor: default; 
-  background-color:#CCCCCC;
-  position:relative;
-  top:10px
+.btnAddFriend {
+ margin-top: 0.25em; 
+}
+
+.chosen-results li {
+  text-align: left;
 }
 
 /**
@@ -366,4 +375,3 @@ p.chat-message img{
     -webkit-box-shadow: inset 0 0 1px rgb(150, 150, 150), inset 0 -.05em .4em rgb(80, 80, 80), 0 .1em 0 rgb(30, 30, 30), 0 .1em .1em rgba(0, 0, 0, .3);
     box-shadow: inset 0 0 1px rgb(150, 150, 150), inset 0 -.05em .4em rgb(80, 80, 80), 0 .1em 0 rgb(30, 30, 30), 0 .1em .1em rgba(0, 0, 0, .3);
   }
-

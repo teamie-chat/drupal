@@ -4,6 +4,13 @@
 // TODO Allow doing a ping test from the UI (to check if the server is up).
 // TODO Decouple node server config and have a way by which it can be GENERATED for a given site.
 // TODO Disable logging to the console unless when in debug mode.
+// TODO Add friends to chat doesn't get cleared.
+// TODO Thread icon can change to plus when thread is minimized.
+// TODO Remove all inline CSS and add classes.
+// TODO Allow whitelabelling friends, groups.
+// TODO Keyboard navigation of the friend list.
+// TODO Open thread indicator next to user/group.
+// TODO Allow site to opt-out of group chat.
 
 var chatClient = (function($, angular, io, ccScope) {
   var iosocket, myId, imgUrlPrefix,userDetailsRequestRecords = [];
@@ -49,7 +56,7 @@ var chatClient = (function($, angular, io, ccScope) {
   USER_STATUS ={offline:0, online:1},
  
   DEFAULT_APPLY_INTERVAL = 100, // delay interval to update message list view according to model
-  MAX_DISPLAYED_THREADS = 0,
+  MAX_VISIBLE_THREADS = 0,
   //1 mins to separate to new block
   MAX_CHAT_MSG_BLOCK_TIME = 60 * 1000;
 
@@ -151,7 +158,7 @@ var chatClient = (function($, angular, io, ccScope) {
               if(i===0){
                 htmlTemp ="\x3Cdiv\x3E\x3Cp class=\"chat-seperator\"\x3E\n\x3Cimg class=\"img-circle chat-profile-picture\" title=\"{1}\" style=\"pointer-events: all\" src=\"{2}\"\x3E\x3Cspan class=\"chat-message chat-inline-picture \" \x3E{3}\x3C\x2Fspan\x3E\n\x3C\x2Fp\x3E\x3C\x2Fdiv\x3E";
               }else{
-                htmlTemp ="\x3Cdiv\x3E  \x3Cdiv style=\"text-align:right \" class=\"distime-container\"\x3E\n\x3Cspan class=\"label  distime\" data-time=\"{0}\" title=\"{4}\"\x3E\x3C\x2Fspan\x3E\n\x3C\x2Fdiv\x3E\n\x3Cp class=\"chat-seperator\"\x3E\n\x3Cimg class=\"img-circle chat-profile-picture\" title=\"{1}\" style=\"pointer-events: all\" src=\"{2}\"\x3E\x3Cspan class=\"chat-message chat-inline-picture \" \x3E{3}\x3C\x2Fspan\x3E\n\x3C\x2Fp\x3E\x3C\x2Fdiv\x3E";
+                htmlTemp ="\x3Cdiv\x3E  \x3Cdiv style=\"text-align:right \" class=\"timeago-container\"\x3E\n\x3Cabbr class=\"label label-default timeago\" title=\"{4}\"\x3E{0}\x3C\x2Fabbr\x3E\n\x3C\x2Fdiv\x3E\n\x3Cp class=\"chat-seperator\"\x3E\n\x3Cimg class=\"img-circle chat-profile-picture\" title=\"{1}\" style=\"pointer-events: all\" src=\"{2}\"\x3E\x3Cspan class=\"chat-message chat-inline-picture \" \x3E{3}\x3C\x2Fspan\x3E\n\x3C\x2Fp\x3E\x3C\x2Fdiv\x3E";
               }
               var relativeTime = scope.getMsgBlockTimeStamp(i,messages);
               var absoluteTime = scope.getFriendlyTimeString(msg.time);
@@ -228,10 +235,11 @@ var chatClient = (function($, angular, io, ccScope) {
     //1.focus the text box when focusThread is me
     //2.mark msg as read when my textbox gets focus
     return {
-
       link: function(scope, $el, attrs, ctrls){
         scope.$watch(function() {
-          disTime(0);
+          jQuery('.timeago').once('timeago', function() {
+            $(this).timeago();
+          });
         });
         scope.$watch("focusThread",function(){
           if(scope.focusThread==scope.tid){
@@ -341,7 +349,7 @@ var chatClient = (function($, angular, io, ccScope) {
 
     $(window).on('load resize',function(){
       $scope.$apply(function(){
-        MAX_DISPLAYED_THREADS = Math.floor($(this).innerWidth()/280);
+        MAX_VISIBLE_THREADS = Math.floor($(this).innerWidth()/280);
       });
     });
 
@@ -649,23 +657,26 @@ var chatClient = (function($, angular, io, ccScope) {
       });
       return list.sort(function(g1,g2){return g1.name.localeCompare(g2.name)});
     }
+    
     $scope.getFriendlyTimeString = function(timeStamp) {
-      var date = new Date(timeStamp),
-      now = new Date(),
-      format;
-      if(date.getYear()!==now.getYear()){
-        format = "dd mmm yyyy, hh:MM TT";
-      }else if(date.getMonth()!==now.getMonth()){
-        format = "dd mmm, hh:MM TT";
-      }else if(date.getDate()-now.getDate()>7){
-        format = "dd mmm, hh:MM TT";
-      }else if(date.getDate() !==now.getDate()){
-        format = "ddd, hh:MM TT";
-      }else {
-        format = "hh:MM:ss TT";
-      }
-
-      return date.format(format);
+      var date = new Date(timeStamp);
+      return (function() {
+        function pad(number) {
+          var r = String(number);
+          if (r.length === 1) {
+            r = '0' + r;
+          }
+          return r;
+        }
+        return date.getUTCFullYear()
+          + '-' + pad(date.getUTCMonth() + 1)
+          + '-' + pad(date.getUTCDate())
+          + 'T' + pad(date.getUTCHours())
+          + ':' + pad(date.getUTCMinutes())
+          + ':' + pad(date.getUTCSeconds())
+          + '.' + String((date.getUTCMilliseconds()/1000).toFixed(3)).slice(2, 5)
+          + 'Z';
+      })();
     }
 
     $scope.isOneOneChatAndOffline = function(threadId){
@@ -758,15 +769,47 @@ var chatClient = (function($, angular, io, ccScope) {
         return [];
       }
     }
-    $scope.getDisplayedThreads = function(){
-      //friend list is counted as one opened dialog already
-      if ($scope.isChatOffline){
+    
+    /**
+     * Connects/Disconnects the user from the Chat service.
+     *
+     * @param bool isOffline
+     *   Boolean indicating whether the chat must be turned off.
+     */ 
+    $scope.setChatStatus = function(isOffline) {
+      $scope.isChatOffline = isOffline;
+      iosocket.send(JSON.stringify({
+        "requestType": REQUEST_TYPE.updateOfflineStatus,
+        "isChatOffline": isOffline
+      }));
+    };
+    
+    /**
+     * Returns the maximum number of threads that can be visible to the user
+     * at any point in time.
+     *
+     * @return Number
+     */
+     $scope.getMaximumVisibleThreads = function() {
+       return MAX_VISIBLE_THREADS - 1;
+     }
+    
+    /**
+     * Returns a set of threads that are currently visible to the user.
+     *
+     * @return array
+     *   A set of threadIds.
+     */
+    $scope.getVisibleThreads = function() {
+      if ($scope.isChatOffline) {
         return [];
-      }else{
-        return  $scope.openThreads.slice(0,MAX_DISPLAYED_THREADS-1);
       }
-        
-    }
+      else {
+        var showOnly = this.getMaximumVisibleThreads();
+        var visibleThreads = $scope.openThreads.slice(0, showOnly);
+        return visibleThreads.reverse();
+      }  
+    };
 
     $scope.getUsersDetails = function(userIds) {
       var index;
@@ -827,13 +870,6 @@ var chatClient = (function($, angular, io, ccScope) {
       } else {
         $scope.openThreadAndFocus(threadId, null, users);
       }
-    }
-    $scope.setChatOffline = function(isChatOffline){
-      $scope.isChatOffline=isChatOffline;
-      iosocket.send(JSON.stringify({
-        "requestType": REQUEST_TYPE.updateOfflineStatus,
-        "isChatOffline": isChatOffline
-      }));
     }
     $scope.openOneOneThread = function(userId) {
       userId = parseInt(userId);

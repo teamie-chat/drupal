@@ -1,0 +1,234 @@
+<div ng-app='app' ng-controller="ChatController" class="chat-overlay">
+  <div update-title style="display:none"></div>
+  <div offline-watch style="display:none"></div>
+  <!-- Main Chat Dialog -->
+  <div class="chat-dialog-container" 
+    data-ng-class="{'chat-ready': isChatReady, 'chat-dialog-container-minimized': isFriendListMinimized}"
+    id="chat-friend-list"
+    style="display:none">
+    <div class="chat-dialog-topbar">
+      <table border="0" class="chat-dialog-menu" ng-class="{'offline': isChatOffline}">
+        <tbody class="tbody-chat-title">
+          <tr>
+            <td style="width:auto" ng-click="isFriendListMinimized=!isFriendListMinimized;setChatStatus({true: isChatOffline,false: false}[isFriendListMinimized])">
+              <div class="chat-dialog-title">
+                {{{true: "Chat (appear offline)", false:"Chat"}[!!isChatOffline]}}
+              </div>
+            </td>
+            <td style="width:30px">
+              <div class="chat-dialog-buttons" >
+                <i class="icon-off icon-white glyphicon glyphicon-off"
+                   rel="tooltip" 
+                   title="{{{true:'Go online',false:'Go offline'}[isChatOffline]}}"
+                   ng-click="setChatStatus(!isChatOffline);isFriendListMinimized=!isFriendListMinimized;">
+                </i>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chat-friend-list-menu">
+      <table>
+        <tbody>
+          <tr>
+            <td style="text-align:left;padding-left:5px;padding-bottom:0px">
+              <i class="icon-search glyphicon glyphicon-search" 
+                 ng-show="activeView=='friends'"
+                 title="Filter by name"
+                 ng-click="showFriendListFilter=!showFriendListFilter">
+              </i>
+            </td>
+            <td style="text-align:right;padding-right:10px" >
+              <span class="label chat-label label-default"
+                ng-class="({true:'chat-label-active', false:''})[activeView=='friends']"
+                ng-click="activeView='friends'">
+                Friends</span>
+              <span class="label chat-label label-default"
+                ng-class="({true:'chat-label-active', false:''})[activeView=='groups']"
+                ng-click="activeView='groups'">
+                Groups</span>
+              <span class="label chat-label label-default"
+                ng-class="({true:'chat-label-active', false:''})[activeView=='archive']"
+                ng-click="activeView='archive'">
+                History</span>
+            </td>
+          </tr>
+          <tr ng-show="showFriendListFilter && (activeView=='friends')" class="chat-view-filter">
+            <td colspan="2" style="text-align:center">
+              <input type="text"
+                     ng-model="friendListFilterText"
+                     focus-me
+                     class="form-control friendListFilter search-query"
+                     placeholder="e.g: John, Smith ..."/>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chat-friend-list-content"
+         ng-switch="activeView"
+         ng-class="({true:'name-filter-shown', false:''})[showFriendListFilter && (activeView=='friends')]"
+         friend-list>
+      <div ng-switch-when="groups">
+        <div class="chat-list-item"
+             ng-repeat="group in getListOfGroupsSortedByName()"
+             ng-click="openGroupThread(group.groupId)"
+             groupId="{{group.groupId}}">
+          <a href="#" class="chat-user-name" ng-click="openGroupThread(group.groupId)">{{group.name}}</a>
+        </div>
+      </div>
+      <div ng-switch-when="friends" >
+        <div ng-repeat="friend in getListOfFriends() | filter: filterObjectByName">
+          <div class="chat-list-item" 
+               draggable="true"
+               ng-user-profile-drag class="resizable"
+               ng-class="{0:'offline', 1:'online'}[friend.status]"
+               ng-click="openOneOneThread(friend.userId)"
+               userId="{{friend.userId}}">
+            <img ng-src="{{getProfileImageURL(friend.image)}}" class="img-circle chat-profile-picture"/>
+            <a href="#" class="chat-user-name" userId="{{friend.userId}}">{{friend.name}}</a>
+            <div ng-switch="!!friendListFilterText && $first" >
+              <kbd 
+                ng-switch-when="true"
+                class="dark"
+                title="Press enter key to chat with this person">Enter &crarr;
+              </kbd>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div ng-switch-when="archive">
+        <div class="chat-list-item archive"
+             ng-repeat="tid in getSafeRecentThreadIds()"
+             ng-click="openThreadAndFocus(tid)">
+          <a href="#" class="chat-user-name" thread-title="archive-tab">{{getThreadTitleArchiveTab(tid)}}<br/></a><br>
+          <span class="archive-last-message">
+	          {{threads[tid].messages[threads[tid].messages.length-1].content}}
+	        </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thread displays -->
+  <div ng-repeat="tid in getVisibleThreads()">
+    <div class="chat-dialog-container"
+         chat-container style="right:{{($index+1)*280}}px;display:none"
+         ng-user-profile-drop="tid"
+         data-ng-class="{'chat-ready': isChatReady,'chat-dialog-container-minimized': threads[tid].minimized}" threadid="{{tid}}" >
+      <div class="chat-dialog-topbar" dialog-toogle>
+        <table class="chat-dialog-menu"
+          border="0"
+          ng-class="{offline: isOneOneChatAndOffline(tid),'unread-messages':threads[tid].numUnreadMessages>0}">
+          <tbody class="tbody-chat-title">
+            <tr>
+              <td style="width:auto" ng-click="toggleThread(tid)">
+                <div class="chat-dialog-title"
+                  ng-class="({'unread-messages':threads[tid].unreadMessages>0})"
+                  thread-title="dialog-title">
+                </div>
+              </td>
+              <td ng-switch="threads[tid].type" style="width:100px">
+                <div ng-switch-when="1" class="chat-dialog-buttons">
+                  <!-- One on one thread -->
+                  <div class="dropdown" style="display:inline;text-align:left">
+                  <button class="dropdown-toggle"
+                    id="threadSettingsMenu"
+                    data-toggle="dropdown"
+                    style="background:transparent;border:none;">
+                    <i class="icon-cog glyphicon glyphicon-cog"></i>
+                  </button>
+                  <ul class="dropdown-menu" role="menu" aria-labelledby="threadSettingsMenu">
+                    <li>
+                      <a href="#" ng-click="toggleRosterDropdown(tid)" threadid="{{tid}}" >
+	                      <i class="icon-user glyphicon glyphicon-user"></i> Add more friends
+	                    </a>
+                    </li>
+                  </ul>
+                </div>
+                <i class="icon-minus glyphicon glyphicon-minus"
+                  rel="tooltip"
+                  title="Minimize"
+                  ng-click="toggleThread(tid)">
+                </i>
+                <i class="icon-remove glyphicon glyphicon-remove"
+                  rel="tooltip"
+                  title="Close"
+                  ng-click="closeThread(tid)"
+                  threadid="{{tid}}">
+                </i>
+              </div>
+              <div ng-switch-when="2" class="chat-dialog-buttons" >
+                <!-- Multi-user thread -->
+                <div class="dropdown" style="display:inline;text-align:left">
+		               <button class="dropdown-toggle"
+		                 id="threadSettingsMenu"
+		                 data-toggle="dropdown"
+		                 style="background:transparent;border:none;">
+		                <i class="icon-cog glyphicon glyphicon-cog"></i>
+		               </button>
+ 		               <ul class="dropdown-menu" role="menu" aria-labelledby="threadSettingsMenu">
+		                  <li>
+			                  <a href="#" ng-click="toggleRosterDropdown(tid)">
+				                  <i class="icon-user glyphicon glyphicon-user"></i> Add more friends
+				                </a>
+			                  <a href="#" ng-click="leaveThread(tid)">
+				                  <i class="icon-ban-circle glyphicon glyphicon-ban-circle"></i> Leave this group chat
+				                </a>
+		                  </li>
+		                </ul>
+		            </div>
+ 		            <i class="icon-minus glyphicon glyphicon-minus" 
+		              rel="tooltip"
+		              title="Minimize"
+		              ng-click="toggleThread(tid)">
+		            </i>
+		            <i class="icon-remove glyphicon glyphicon-remove"
+		              rel="tooltip"
+		              title="Close"
+		              ng-click="closeThread(tid)"
+		              threadid="{{tid}}">
+		            </i>
+              </div>
+              <div ng-switch-when="3" class="chat-dialog-buttons" >
+                <!-- Group thread-->
+                <i class="icon-minus glyphicon glyphicon-minus" 
+                  rel="tooltip"
+                  title="Minimize"
+                  ng-click="toggleThread(tid)">
+                </i>
+                <i class="icon-remove glyphicon glyphicon-remove"
+                  rel="tooltip"
+                  title="Close"
+                  ng-click="closeThread(tid)"
+                  threadid="{{tid}}">
+                </i>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chat-roster-overlay">
+      <div class="chat-roster-hint"><b>Ctrl + Enter</b>: Add friend(s) | <b>ESC</b>: Cancel</div>
+      <select class="chzn-select2" 
+        data-placeholder="Add friends to chat"
+        ng-model="groupUsers"
+        style="bottom:0px;position:relative;width:80%;"
+        multiple chat-roster-dropdown>
+      </select>
+      <button class="btn btn-xs btn-default btnAddFriend">
+	      <i class="icon-plus-sign glyphicon glyphicon-plus-sign"></i> Add friend(s)
+	    </button>
+    </div>
+    <div class="chat-dialog-content" chat-content>
+      <div chat-messages></div>
+    </div>
+    <input type="text"
+      id="chatText-{{tid}}"
+      chat-input="chatInputKeyUp(this,event)"
+      threadId="{{tid}}"/>
+    </div>
+  </div>
+</div> <!-- End of Angular app container -->

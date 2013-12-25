@@ -98,7 +98,7 @@ e. APIs List
     *openThread(threadId,oldThreadIndex,users): call initThread and open it (make it visible to users). List of all visible threads are kept in cc.openThreads
       oldThreadIndex:  if present, will close the thread at oldThreadIndex in openThread and replace it by this one. Example use case: a one-one chat thread can be replaced by a multiuser thread if the user add his/her friend to this thread
 
-    *openThreadAndFocus(): call openThread and set focusThread to this threadId, when $apply scans the model for changes, it will eventually focus the chat textbox which belongs to this threadID. Note that not all threads in openThreads are displayed, depending on whether the screen width is enough to display those dialogs. Function getDisplayedThreads is used to get final visible threads, MAX_DISPLAYED_THREADS is changed whenever users resizes the screen.
+    *openThreadAndFocus(): call openThread and set focusThread to this threadId, when $apply scans the model for changes, it will eventually focus the chat textbox which belongs to this threadID. Note that not all threads in openThreads are displayed, depending on whether the screen width is enough to display those dialogs. Function getVisibleThreads is used to get final visible threads, MAX_VISIBLE_THREADS is changed whenever users resizes the screen.
 
     *openOneOneThread(receiverId): calls openThreadAndFocus to open a 1.1.thread with receiverId
     *openGroupThread(groupId): calls openThreadAndFocus to open a group.thread with groupID
@@ -128,7 +128,7 @@ e. APIs List
       markThreadAsRead(threadId)
       getRecentThreads()
       getOldMessages():
-      setChatOffline()
+      setChatStatus()
       sendMessage();
        
     *iosocket.on('message', function(message) {}): this function set various event handlers when a new message from the servers arrives, depending on msg.RESPONSE_TYPE in switch statement. Most of message handlers are wrapped in $apply function.
