@@ -1,6 +1,7 @@
-name = Teamie Chat
-description = To be added
+name = Chat
+description = A nodeJS/AngularJS powered Chat solution that allows one - one and multi-user chats on a Drupal site.
 core = 7.x
+version = 7.x-1.0-dev
 package = Chat
 
 dependencies[] = og

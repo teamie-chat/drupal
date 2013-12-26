@@ -1,5 +1,5 @@
-name = Example Teamie Chat Bot
-description = Why, hello there!
+name = Chat Bot (Example)
+description = An example implementation of a bot for a Teamie Chat-powered Drupal site.
 version = 7.x-1.0-dev
 core = 7.x
 package = Chat
