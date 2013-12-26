@@ -11,6 +11,7 @@
 // TODO Keyboard navigation of the friend list.
 // TODO Open thread indicator next to user/group.
 // TODO Allow site to opt-out of group chat.
+// TODO Scroll to the bottom of the Chat thread box when a new message arrives.
 
 var chatClient = (function($, angular, io, ccScope) {
   var iosocket, myId, imgUrlPrefix,userDetailsRequestRecords = [];

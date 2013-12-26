@@ -1,5 +1,7 @@
 name = Teamie Chat
 description = To be added
 core = 7.x
-package = Teamie
+package = Chat
+
 dependencies[] = og
+dependencies[] = realname

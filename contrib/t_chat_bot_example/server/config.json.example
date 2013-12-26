@@ -1,0 +1,9 @@
+{
+ "DRUPAL_SITE_URL": 'http://drupal.example.com',
+ "CHAT_SERVER_URL": 'http://drupal.example.com:9010',
+ "DRUPAL_SERVICES_BASE_PATH": '/api',
+ "BOT": {
+   "username": "username",
+   "password": "password"
+ }
+};

@@ -1,5 +1,7 @@
 # Ignore locally installed node modules as they can be
 # re-obtained using package.json by running npm install.
-server/node_modules/
-# Ignore configuration files
+node_modules/
+# Ignore configuration files.
 server/*.conf.js
+# Ignore bot configuration file.
+contrib/*/server/config.json

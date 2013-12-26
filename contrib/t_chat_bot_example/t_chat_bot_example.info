@@ -1,0 +1,9 @@
+name = Example Teamie Chat Bot
+description = Why, hello there!
+version = 7.x-1.0-dev
+core = 7.x
+package = Chat
+
+dependencies[] = t_chat
+dependencies[] = services
+dependencies[] = rest_server

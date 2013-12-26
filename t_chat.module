@@ -58,6 +58,6 @@ function t_chat_page_alter(&$page) {
     drupal_add_js($module_settings, array('type' => 'setting'));
     drupal_add_js($module_path . '/client/chat.js');
     drupal_add_css($module_path . '/client/chat.css');
-    $page['content']['chat']['#markup'] = file_get_contents(drupal_get_path('module', 't_chat') . '/client/conduit.html');
+    $page['content']['chat']['#markup'] = file_get_contents($module_path . '/client/widget.html');
   }
 }
