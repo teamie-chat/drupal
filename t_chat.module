@@ -52,7 +52,7 @@ function t_chat_page_alter(&$page) {
     if ($use_cdn) {
 	    $external = array('type' => 'external');
 	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.5/angular.min.js", $external);
-	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.5/angular-sanitize.min.js", $external);
+	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.1/angular-sanitize.min.js", $external);
 	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js", $external);
 	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.1.0/jquery.timeago.min.js", $external);
     }
