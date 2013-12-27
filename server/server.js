@@ -273,9 +273,6 @@ var getUsersDetails = function(userIds, callback) {
   mysqlConn.query(sqlQueryFormat, [userIds], function(err, results) {
     if (err) console.log("MySQL error" + err);
     else {
-      _.each(results,function(u){
-        u.image= u.image && u.image.replace("://","/");
-      });
       callback(results);
     }
   });
@@ -286,10 +283,6 @@ var getUserRoster = function(userId, callback) {
   mysqlConn.query(sqlQueryFormat, [userId], function(err, results) {
     if (err) console.log("MySQL error" + err);
     else {
-
-      _.each(results,function(u){
-        u.image= u.image && u.image.replace("://","/");
-      });
       callback(results);
     }
   });
@@ -585,8 +578,6 @@ sio.on('connection', function(client) {
                             responseMsg.isChatOffline = {"true":true,"false":false,nil:false}[result];
                             //TODO: can get threads details here instead
                             responseMsg.threads = {};
-                            responseMsg.imgUrlPrefix = conf.imageUrlPrefix;
-                            responseMsg.defaultProfileImgUrl = conf.defaultPic;
                             client.send(JSON.stringify(responseMsg));
                           })
                         });
@@ -922,8 +913,3 @@ app.post('/api/chatlog', function(req, res) {
     res.send("wrong token");
   }
 });
-
-app.get('/profile_image.jpg', function(req, res) {
-  res.sendfile(__dirname + '/profile_img.jpg');
-});
-app.use("/emoticons", express.static(__dirname + "/emoticons"));

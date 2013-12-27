@@ -86,7 +86,7 @@
                ng-class="{0:'offline', 1:'online'}[friend.status]"
                ng-click="openOneOneThread(friend.userId)"
                userId="{{friend.userId}}">
-            <img ng-src="{{getProfileImageURL(friend.image)}}" class="img-circle chat-profile-picture"/>
+            <img ng-if="chatSettings.userPicturesAllowed === 1" ng-src="{{getUserPictureUrl(friend.image)}}" class="img-circle chat-profile-picture"/>
             <a href="#" class="chat-user-name" userId="{{friend.userId}}">{{friend.name}}</a>
             <div ng-switch="!!friendListFilterText && $first" >
               <kbd 
@@ -223,7 +223,31 @@
 	    </button>
     </div>
     <div class="chat-dialog-content" chat-content>
-      <div chat-messages></div>
+      <div chat-messages>
+          <div ng-repeat="message in messages">
+              <!-- Individual message -->
+              <div class="chat-message"
+                   ng-if="!message.isChatBlock"
+                   ng-bind-html="message.filteredContent"></div>
+              <!-- Start of a block of messages -->
+              <div class="chat-block chat-block-start" ng-if="message.isChatBlock">
+                  <div ng-if="$index !== 0" class="timeago-container" style="text-align: right">
+                      <abbr class="timeago label label-default" title="{{message.absoluteTimestamp}}"></abbr>
+                  </div>
+                  <div class="chat-seperator">
+                      <strong ng-if="chatSettings.userPicturesAllowed === 0">
+                          {{message.sender.name}}:
+                      </strong>
+                      <img class="img-circle chat-profile-picture"
+                           ng-if="chatSettings.userPicturesAllowed === 1"
+                           title="{{message.sender.name}}"
+                           ng-src="{{message.authorPictureUrl}}"
+                           style="pointer-events: all;"/>
+                      <span class="chat-message chat-inline-picture" ng-bind-html="message.filteredContent"></span>
+                  </div>
+              </div>
+          </div>
+      </div>
     </div>
     <input type="text"
       id="chatText-{{tid}}"

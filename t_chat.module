@@ -1,13 +1,33 @@
 <?php
 
 /**
+ * Implements hook_menu().
+ */
+function t_chat_menu() {
+  return array(
+    'admin/config/system/chat' => array(
+      'title' => 'Chat',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('t_chat_admin'),
+      'access arguments' => array('configure chat'),
+      'file' => 't_chat.admin.inc',
+      'type' => MENU_NORMAL_ITEM
+    )
+  );
+}
+
+/**
  * Implements hook_permission().
  */
 function t_chat_permission() {
   return array(
+    'configure chat' => array(
+      'title' => t('Configure Chat Settings'),
+      'description' => t('Allows setting and modifying parameters of the Chat sub-system.')
+    ),
     'use chat' => array(
-      'title' => t('Use chat'),
-      'description' => t('Allows user to access the chat client.')
+      'title' => t('Use Chat'),
+      'description' => t('Allows users to access the chat client.')
     )
   );
 }
@@ -21,14 +41,18 @@ function t_chat_page_alter(&$page) {
 	  $module_settings = array(
       'teamieChat' => array(
         'serverUrl' => variable_get('t_chat_server_url', 'http://chat.example.com:8888'),
-        'redisPrefix' => variable_get('t_chat_redis_prefix', '')
+        'redisPrefix' => variable_get('t_chat_redis_prefix', ''),
+        'userPicturesAllowed' => variable_get('user_pictures', 0),
+        'userPictureDefault' => variable_get('user_picture_default',
+            'http://placehold.it/' . variable_get('user_picture_dimensions', '85x85') . '.png'),
+        'filePublicPath' => file_create_url(variable_get('file_public_path', 'sites/default/files') . '/')
       )
     );
     $use_cdn = variable_get('t_chat_use_cdn', 0);
     if ($use_cdn) {
 	    $external = array('type' => 'external');
-	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.1/angular.min.js", $external);
-	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.1/angular-sanitize.min.js", $external);
+	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.5/angular.min.js", $external);
+	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.5/angular-sanitize.min.js", $external);
 	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js", $external);
 	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.1.0/jquery.timeago.min.js", $external);
     }
@@ -54,10 +78,38 @@ function t_chat_page_alter(&$page) {
     elseif (libraries_detect('jquery-chosen')) {
 	    libraries_load('jquery-chosen');
     }
+    drupal_add_css($module_path . '/client/chat.css');
+    $page['content']['chat']['#markup'] = file_get_contents($module_path . '/client/widget.html');
+
+    if (variable_get('t_chat_alert_sounds', 0)) {
+      $page['content']['chat_audio'] = array(
+        '#theme' => 'html_tag',
+        '#tag' => 'audio',
+        '#value' => '',
+        '#attributes' => array(
+          'id' => 'teamieChatAudioElem',
+          'src' => file_create_url($module_path . '/client/alert.wav'),
+          'class' => array('hide')
+        )
+      );
+    }
+
+    if (variable_get('t_chat_escapehtml', 1)) {
+      $module_settings['teamieChat']['escapeHTML'] = 1;
+    }
+
+    if (variable_get('t_chat_linkify', 1)) {
+      $module_settings['teamieChat']['linkify'] = 1;
+    }
+
+    if (variable_get('t_chat_emoticonize', 0)) {
+      $module_settings['teamieChat']['emoticonize'] = 1;
+      $module_settings['teamieChat']['emoticonBaseUrl'] =
+          file_create_url($module_path . '/client/');
+    }
+
     drupal_add_js($module_path . '/client/utils.js');
     drupal_add_js($module_settings, array('type' => 'setting'));
     drupal_add_js($module_path . '/client/chat.js');
-    drupal_add_css($module_path . '/client/chat.css');
-    $page['content']['chat']['#markup'] = file_get_contents($module_path . '/client/widget.html');
   }
 }

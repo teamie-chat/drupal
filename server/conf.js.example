@@ -20,9 +20,7 @@ function get() {
 		  prefix: '' 
 		},
 		defaultPort: 8888,
-		apiToken: "myVerySecretToken",
-		imageUrlPrefix: 'http://example.com/sites/default/files/styles/chat_profile/',
-		defaultPic: 'http://example.com/sites/default/files/user-default-pic.png'
+		apiToken: "myVerySecretToken"
 	};
 }
 

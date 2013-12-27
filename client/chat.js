@@ -1,28 +1,14 @@
-// TODO Make emoticonize work.
-// TODO Make emoticonize, linkify configurable from the UI.
-// TODO Make the server URL (SOCKET_SERVER) configurable from the UI.
-// TODO Allow doing a ping test from the UI (to check if the server is up).
-// TODO Decouple node server config and have a way by which it can be GENERATED for a given site.
-// TODO Disable logging to the console unless when in debug mode.
-// TODO Add friends to chat doesn't get cleared.
-// TODO Thread icon can change to plus when thread is minimized.
-// TODO Remove all inline CSS and add classes.
-// TODO Allow whitelabelling friends, groups.
-// TODO Keyboard navigation of the friend list.
-// TODO Open thread indicator next to user/group.
-// TODO Allow site to opt-out of group chat.
-// TODO Scroll to the bottom of the Chat thread box when a new message arrives.
-
-var chatClient = (function($, angular, io, ccScope) {
-  var iosocket, myId, imgUrlPrefix,userDetailsRequestRecords = [];
+var chatClient = (function($, angular, io, drupalSettings) {
+  var iosocket, myId,userDetailsRequestRecords = [];
+  var chatSettings = drupalSettings.teamieChat || {};
   var THREAD_TYPE = {
     oneOneThread: 1,
     multiuserThread: 2,
     groupThread: 3
   },
-  SOCKET_SERVER = Drupal.settings.teamieChat.serverUrl,
-  ONE_ONE_THREAD_FORMAT = Drupal.settings.teamieChat.redisPrefix + "1.1.thread:{0}:{1}",
-  GROUP_THREAD_FORMAT = Drupal.settings.teamieChat.redisPrefix + "group.thread:{0}",
+  SOCKET_SERVER = chatSettings.serverUrl,
+  ONE_ONE_THREAD_FORMAT = chatSettings.redisPrefix + "1.1.thread:{0}:{1}",
+  GROUP_THREAD_FORMAT = chatSettings.redisPrefix + "group.thread:{0}",
   NUM_OLD_MESSAGES_PER_REQUEST = 50,
 
   REQUEST_TYPE = {
@@ -55,24 +41,13 @@ var chatClient = (function($, angular, io, ccScope) {
     updateOfflineStatus: 11
   },
   USER_STATUS ={offline:0, online:1},
- 
-  DEFAULT_APPLY_INTERVAL = 100, // delay interval to update message list view according to model
+  // delay interval to update message list view according to model
+  DEFAULT_APPLY_INTERVAL = 100,
   MAX_VISIBLE_THREADS = 0,
-  //1 mins to separate to new block
+  // 1 mins to separate to a new block
   MAX_CHAT_MSG_BLOCK_TIME = 60 * 1000;
 
-
-  //init angular app
-  angular.module('app', ['filter']);
-  angular.module('filter', []).filter('escapeHTML', function() {
-    return escapeHTML;
-  }).filter('linkify', function() {
-    return linkify;
-  })
-    .filter('emoticonize', function() {
-    return emoticonize;
-  });
-  angular.module('app', ['ngSanitize', 'filter' ]).directive('chatInput', function() {
+  angular.module('app', ['ngSanitize' ]).directive('chatInput', function() {
     return function(scope, elm, attrs) {
       $(elm).bind("keydown", function(e) {
         scope.chatInputKeyDown(e, this);
@@ -144,44 +119,33 @@ var chatClient = (function($, angular, io, ccScope) {
   }).directive('chatMessages', function($parse) {
     return {
       link: function(scope, el, attr) {
-        scope.$watch('threads["{0}"].messages.length'.f(scope.tid), function(newVal,oldVal,scope) {
-          var html = "",htmlTemp;
-          var messages = scope.$parent.threads[scope.tid].messages;
-          for(i=0;i<messages.length;i++){
-            var msg = messages[i];
-            var sender = scope.$parent.users[msg.senderId];
-
-            if(scope.$parent.isFirstInSection(i,messages)){
-              var htmlBeginChatBlock = "\x3Cdiv class=\"chat-block\"\x3E";
-              var htmlEndChatBlock = "\x3C\x2Fdiv\x3E",filteredMsg;
-
-              //formats: time, sender name, image, content
-              if(i===0){
-                htmlTemp ="\x3Cdiv\x3E\x3Cp class=\"chat-seperator\"\x3E\n\x3Cimg class=\"img-circle chat-profile-picture\" title=\"{1}\" style=\"pointer-events: all\" src=\"{2}\"\x3E\x3Cspan class=\"chat-message chat-inline-picture \" \x3E{3}\x3C\x2Fspan\x3E\n\x3C\x2Fp\x3E\x3C\x2Fdiv\x3E";
-              }else{
-                htmlTemp ="\x3Cdiv\x3E  \x3Cdiv style=\"text-align:right \" class=\"timeago-container\"\x3E\n\x3Cabbr class=\"label label-default timeago\" title=\"{4}\"\x3E{0}\x3C\x2Fabbr\x3E\n\x3C\x2Fdiv\x3E\n\x3Cp class=\"chat-seperator\"\x3E\n\x3Cimg class=\"img-circle chat-profile-picture\" title=\"{1}\" style=\"pointer-events: all\" src=\"{2}\"\x3E\x3Cspan class=\"chat-message chat-inline-picture \" \x3E{3}\x3C\x2Fspan\x3E\n\x3C\x2Fp\x3E\x3C\x2Fdiv\x3E";
-              }
-              var relativeTime = scope.getMsgBlockTimeStamp(i,messages);
-              var absoluteTime = scope.getFriendlyTimeString(msg.time);
-              // filteredMsg = emoticonize(linkify(escapeHTML(messages[i].content)));
-              filteredMsg = linkify(escapeHTML(messages[i].content));
-
-              var imageUrl = scope.$parent.getProfileImageURL(sender.image);
-              if(i>0){
-                html+= htmlEndChatBlock;
-              }
-              html+=htmlBeginChatBlock;
-              html += htmlTemp.f(relativeTime,sender.name,imageUrl,filteredMsg,absoluteTime);
-            }else{
-              htmlTemp = "\x3Cp class=\"chat-message\"\x3E{0}\x3C\x2Fp\x3E";
-              // filteredMsg = emoticonize(linkify(escapeHTML(messages[i].content)));
-              filteredMsg = linkify(escapeHTML(messages[i].content));
-              html += htmlTemp.f(filteredMsg);
+				scope.messages = [];
+				scope.$watch('threads["{0}"].messages.length'.f(scope.tid), function(newVal, oldVal, scope) {
+					scope.messages = scope.$parent.threads[scope.tid].messages;
+					for (var i = 0; i < scope.messages.length; i++) {
+						var message = scope.messages[i];
+						message.sender = scope.$parent.users[message.senderId];
+						/* -- Filter section start -- */
+						message.filteredContent = message.content;
+            if (chatSettings.escapeHTML) {
+							message.filteredContent = escapeHTML(message.filteredContent);
             }
-          }
-          el.html(html);
-
-        });
+            if (chatSettings.linkify) {
+							message.filteredContent = linkify(message.filteredContent);
+            }
+            if (chatSettings.emoticonize &&
+                chatSettings.emoticonBaseUrl) {
+							message.filteredContent = emoticonize(message.filteredContent, chatSettings.emoticonBaseUrl);
+            }
+						/* -- Filter section end -- */
+						// @todo Move filter section above as Angular filters so that they can be moved to the view.
+						message.isChatBlock = scope.$parent.isFirstInSection(i, scope.messages);
+						message.relativeTimestamp = scope.getMsgBlockTimeStamp(i, scope.messages);
+            message.absoluteTimestamp = scope.getFriendlyTimeString(message.time);
+            message.authorPictureUrl = scope.$parent.getUserPictureUrl(message.sender.image);
+						scope.messages[i] = message;
+					}
+				});
       }
     };
   }).directive('chatRosterDropdown', function($parse) {
@@ -348,6 +312,8 @@ var chatClient = (function($, angular, io, ccScope) {
     };
   }).controller('ChatController', ['$scope', function($scope, $injector) {
 
+    $scope.chatSettings = chatSettings;
+
     $(window).on('load resize',function(){
       $scope.$apply(function(){
         MAX_VISIBLE_THREADS = Math.floor($(this).innerWidth()/280);
@@ -440,8 +406,6 @@ var chatClient = (function($, angular, io, ccScope) {
                 $scope.initThread(threadId);
                 $scope.threads[threadId].numUnreadMessages =  numUnreadMessages;
               })
-              $scope.imgUrlPrefix = msg.imgUrlPrefix;
-              $scope.defaultProfileImgUrl = SOCKET_SERVER + msg.defaultProfileImgUrl;
               $scope.isChatReady = true;
 
               $.each(msg.unreadThreads,function(threadId){
@@ -527,6 +491,11 @@ var chatClient = (function($, angular, io, ccScope) {
             }
             if(msg.senderId === myId){
               $scope.threads[msg.threadId].numUnreadMessages=0;
+            }
+            else {
+              if ($('#teamieChatAudioElem').length && !$('body').hasClass('chat-window-in-focus')) {
+                $('#teamieChatAudioElem').get(0).play();
+              }
             }
             $scope.checkUserCache(msg.senderId);
           } else {
@@ -645,12 +614,6 @@ var chatClient = (function($, angular, io, ccScope) {
         }))
       }
     }
-    $scope.getProfileImageURL = function(fileName){
-      if((fileName == "null")||(fileName === null)){
-        return $scope.defaultProfileImgUrl;
-      }
-      return $scope.imgUrlPrefix + fileName;
-    }
     $scope.getListOfGroupsSortedByName = function(timeStamp) {
       var list = [];
       $.each($scope.groups,function(i,group){
@@ -735,7 +698,7 @@ var chatClient = (function($, angular, io, ccScope) {
           iosocket.send(JSON.stringify({
             "requestType": REQUEST_TYPE.getOldMessages,
             "threadId": threadId,
-            "msgIndex": msgIndex,
+            "msgIndex": msgIndex
           }))
           $scope.threads[threadId].lastRequestedMsgIndex = msgIndex;
         }
@@ -811,6 +774,31 @@ var chatClient = (function($, angular, io, ccScope) {
         return visibleThreads.reverse();
       }  
     };
+
+    /**
+     * Gets the full URL to a user's profile picture given its
+     * Drupal URI retrieved from the database. Eg. public://foo/bar/baz
+     *
+     * @param string drupalUri
+     *
+     * @returns string
+     *  Full URL to the specified URI or the default user picture otherwise.
+     *  false if user pictures haven't been enabled on the site.
+     */
+    $scope.getUserPictureUrl = function(drupalUri) {
+      if (!chatSettings.userPicturesAllowed) {
+        return false;
+      }
+      if (drupalUri === null) {
+        if (chatSettings.userPictureDefault.search('public://') === -1) {
+          return chatSettings.userPictureDefault;
+        }
+        else {
+          drupalUri = chatSettings.userPictureDefault;
+        }
+      }
+      return drupalUri.replace('public://', chatSettings.filePublicPath);
+    }
 
     $scope.getUsersDetails = function(userIds) {
       var index;
@@ -975,7 +963,7 @@ var chatClient = (function($, angular, io, ccScope) {
 
           senderId: myId,
           time: new Date().getTime(),
-          content: "test message " + i,
+          content: "test message " + i
         });
       }
       $scope.$apply();
@@ -1351,7 +1339,7 @@ var chatClient = (function($, angular, io, ccScope) {
       }
     }
 
-  },
+  }
   ]);
   //END OF CHAT CONTROLLER
 });
@@ -1359,10 +1347,22 @@ var chatClient = (function($, angular, io, ccScope) {
 (function($) {
   Drupal.behaviors.teamieChat = {
     attach: function(context, settings) {
-      jQuery('body').once('chat-client', function() {
-        // Run the chat client.
-        chatClient($, angular, io);
-      });
+      // Keep track of whether the window is in focus or not.
+      // This helps us decide whether we want to play sound alerts for new messages.
+      $('body')
+        .once('chat-window-focus', function() {
+           $(window)
+             .focus(function() {
+               $('body').addClass('chat-window-in-focus');
+             })
+             .blur(function() {
+               $('body').removeClass('chat-window-in-focus');
+             });
+        })
+        .once('chat-client', function() {
+          // Run the chat client.
+          chatClient($, angular, io, settings);
+        });
     }
   };
 })(jQuery);

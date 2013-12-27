@@ -49,32 +49,12 @@
     return s;
   };
 
-  // to move an element of old_index to new_index
-  Array.prototype.move = function (old_index, new_index) {
-    var self = this;
-    // Ugly hack required because of an unknown issue with jQuery form plugin
-    // because of which AJAX form ops on a page with this script file included
-    // doesn't work!
-
-    // Needs jQuery.
-    if (jQuery.isArray(this)) {
-      if (new_index >= self.length) {
-        var k = new_index - self.length;
-        while ((k--) + 1) {
-          this.push(undefined);
-        }
-      }
-      this.splice(new_index, 0, this.splice(old_index, 1)[0]);
-      return self;
-    }
-  };
-
   window.isNumeric = function(n) {
     return ! isNaN(parseFloat(n)) && isFinite(n);
   };
   
   /* adapted from http://vaneyck.github.io/emoticonize/emot.js */
-  EMOTICON_ICONS = {
+  var EMOTICON_ICONS = {
     ":)": "smile.png",
     ":-)": "smile.png",
     "=)": "smile.png",
@@ -107,46 +87,42 @@
     "8-|": "glasses-nerdy.png",
     "8o|": "teeth.png"
   };
-//  window.emoticonize = (function() {
-//    var init = function(t, source) {
-//      var emotMap = defaultMap;
-//      $.each(emotMap, function(k, v) {
-//        t = t.replace(k, "<img class='emoticon-icon' src='" + emotMap[k] + "'/>");
-//      });
-//      return t;
-//    };
-//    var defaultMap = (function() {
-//      var u = window.SOCKET_SERVER + "/emoticons/";
-//      var m = EMOTICON_ICONS;
-//      var img;
-//      $.each(m, function(k, v) {
-//        m[k] = u + v;
-//      });
-//      return m;
-//    })();
-//    var cacheImgs = (function() {
-//      var tmpImgs = [];
-//      var m = EMOTICON_ICONS;
-//
-//      $.each(m, function(k, v) {
-//        img = new Image();
-//        img.src = v;
-//        tmpImgs.push(img);
-//      });
-//      return tmpImgs;
-//    })();
-//    return init;
-//  } ());
-//  window._cacheEmoticons = function() {
-//    var icons = EMOTICON_ICONS;
-//    var imgs = [],
-//    img;
-//    $.each(icons, function(k, iconImgName) {
-//      img = new Image();
-//      img.src = iconImgName;
-//      imgs.push(img);
-//    });
-//    return imgs;
-//  } ();
+  window.emoticonize = function(text, baseUrl) {
+    if (!this.emotMap) {
+      this.emotMap = (function(baseUrl) {
+        var u = baseUrl + "/emoticons/";
+        var m = EMOTICON_ICONS;
+        var img;
+        $.each(m, function(k, v) {
+          m[k] = u + v;
+        });
+        return m;
+      })(baseUrl);
+    }
+    $.each(emotMap, function(k, v) {
+      text = text.replace(k, "<img class='emoticon-icon' src='" + emotMap[k] + "'/>");
+    });
+    return text;
+  };
+
+  // to move an element of old_index to new_index
+	Array.prototype.move = function (old_index, new_index) {
+			var self = this;
+			// Ugly hack required because of an unknown issue with jQuery form plugin
+			// because of which AJAX form ops on a page with this script file included
+			// doesn't work!
+
+			// Needs jQuery.
+			if (jQuery.isArray(this)) {
+					if (new_index >= self.length) {
+							var k = new_index - self.length;
+							while ((k--) + 1) {
+									this.push(undefined);
+							}
+					}
+					this.splice(new_index, 0, this.splice(old_index, 1)[0]);
+					return self;
+			}
+	};
 
 })(jQuery);
