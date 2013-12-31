@@ -3,6 +3,7 @@
  "CHAT_SERVER_URL": "http://drupal.example.com:9010",
  "DRUPAL_SERVICES_BASE_PATH": "/api",
  "BOT": {
+   "uid": 1,
    "username": "username",
    "password": "password"
  }

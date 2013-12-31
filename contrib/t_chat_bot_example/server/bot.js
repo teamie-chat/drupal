@@ -72,8 +72,11 @@ npm.load(function() {
     var replyProcess = [];
     socket.on('message', function(message) {
       var message = JSON.parse(message);
+			var uid = config.BOT.uid;
+			var re = ('(1.1.thread:[0-9]{1,}:' + uid + '|1.1.thread:' + uid + ':[0-9]{1,})$');
+			re = new RegExp(re);
       // Only supports 1-1 conversations for now.
-      if (message.responseType === 1) {
+      if ((message.responseType === 1) && (re.exec(message.threadId))) {
         var max = 4;
         var i = 1;
         var proverbs = [

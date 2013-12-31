@@ -791,7 +791,7 @@ var chatClient = (function($, angular, io, drupalSettings) {
       if (!chatSettings.userPicturesAllowed) {
         return false;
       }
-      if (drupalUri === null) {
+      if ((typeof(drupalUri) === 'undefined' || (drupalUri === null))) {
         if (chatSettings.userPictureDefault.search('public://') === -1) {
           return chatSettings.userPictureDefault;
         }

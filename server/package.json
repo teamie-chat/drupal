@@ -1,6 +1,6 @@
 {
   "name":"teamie-chat-server",
-  "description":"Teamie Chat Server",
+  "description":"Teamie Chat",
   "homepage":"https://drupal.org/sandbox/teamie/2038505",
   "repository":"git://git.drupal.org:sandbox/teamie/2038505.git",
   "author":"Navie Huynh <navie@theteamie.com>",
@@ -23,11 +23,5 @@
   },
   "engines":{
     "node":">= 0.4.0"
-  },
-  "licenses":[
-    {
-    "type":"none",
-    "url":"none"
   }
-  ]
 }

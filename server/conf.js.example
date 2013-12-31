@@ -18,9 +18,9 @@ function get() {
 		  password: '',
 		  prefix: '' 
 		},
-		defaultPort: 8888,
 		apiToken: "myVerySecretToken",
-		maxChatMessagesPerRequest: 10
+		maxChatMessagesPerRequest: 10,
+		maxRecentThreadsPerRequest: 10
 	};
 }
 
