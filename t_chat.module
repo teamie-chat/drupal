@@ -37,8 +37,8 @@ function t_chat_permission() {
  */
 function t_chat_page_alter(&$page) {
   if (user_access('use chat')) {
-	  $module_path = drupal_get_path('module', 't_chat');
-	  $module_settings = array(
+    $module_path = drupal_get_path('module', 't_chat');
+    $module_settings = array(
       'teamieChat' => array(
         'serverUrl' => variable_get('t_chat_server_url', 'http://chat.example.com:8888'),
         'redisPrefix' => variable_get('t_chat_redis_prefix', ''),
@@ -50,33 +50,33 @@ function t_chat_page_alter(&$page) {
     );
     $use_cdn = variable_get('t_chat_use_cdn', 0);
     if ($use_cdn) {
-	    $external = array('type' => 'external');
-	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.5/angular.min.js", $external);
-	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.1/angular-sanitize.min.js", $external);
-	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js", $external);
-	    drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.1.0/jquery.timeago.min.js", $external);
+      $external = array('type' => 'external');
+      drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.5/angular.min.js", $external);
+      drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.1/angular-sanitize.min.js", $external);
+      drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js", $external);
+      drupal_add_js("//cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.1.0/jquery.timeago.min.js", $external);
     }
     else {
-	    if (libraries_detect('angularjs')) {
-		    libraries_load('angularjs');
-	    }
-	    if (libraries_detect('angularjs-sanitize')) {
-		    libraries_load('angularjs-sanitize');
-	    }
-	    if (libraries_detect('socket-io')) {
-		    libraries_load('socket-io');
-	    }
-	    // @todo Later maybe integrate with the Drupal timeago project: https://drupal.org/project/timeago
-	    // just like how we have done for jQuery Chosen below.
-	    if (libraries_detect('jquery-timeago')) {
-		    libraries_load('jquery-timeago');
-	    }
+      if (libraries_detect('angularjs')) {
+        libraries_load('angularjs');
+      }
+      if (libraries_detect('angularjs-sanitize')) {
+        libraries_load('angularjs-sanitize');
+      }
+      if (libraries_detect('socket-io')) {
+        libraries_load('socket-io');
+      }
+      // @todo Later maybe integrate with the Drupal timeago project: https://drupal.org/project/timeago
+      // just like how we have done for jQuery Chosen below.
+      if (libraries_detect('jquery-timeago')) {
+        libraries_load('jquery-timeago');
+      }
     }
     if (module_exists('chosen')) {
       drupal_add_library('chosen', 'drupal.chosen');
     }
     elseif (libraries_detect('jquery-chosen')) {
-	    libraries_load('jquery-chosen');
+      libraries_load('jquery-chosen');
     }
     drupal_add_css($module_path . '/client/chat.css');
     $page['content']['chat']['#markup'] = file_get_contents($module_path . '/client/widget.html');
@@ -105,7 +105,7 @@ function t_chat_page_alter(&$page) {
     if (variable_get('t_chat_emoticonize', 0)) {
       $module_settings['teamieChat']['emoticonize'] = 1;
       $module_settings['teamieChat']['emoticonBaseUrl'] =
-          file_create_url($module_path . '/client/');
+      file_create_url($module_path . '/client/');
     }
 
     drupal_add_js($module_path . '/client/utils.js');
