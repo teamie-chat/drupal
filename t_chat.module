@@ -5,7 +5,7 @@
  */
 function t_chat_menu() {
   return array(
-    'admin/config/system/chat' => array(
+    'admin/config/people/chat' => array(
       'title' => 'Chat',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('t_chat_admin'),

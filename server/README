@@ -137,15 +137,16 @@ e. APIs List
   
 f. Web service APIs list:
 
+  - Ping
+    POST /ping
+    token: API_TOKEN
+
   - to get all threads of a user, in most recent order:
-    teamie.dev:8888/api/recentThreads
-    userId:1
+    GET /api/user/:uid/threads
     token: API_TOKEN (as defined in server.js)
 
-  - to get MAX_WEB_SERVICES_MESSAGES_PER_REQUEST in most recent order of a thread, support offset
-    teamie.dev:8888/api/chatlog
-    tid: 1.1.thread:1:2831
-    offset: 0 or positive integer
+  - to get messages in most recent order of a thread, support offset
+    GET /api/thread/:threadId/messages?threadId=...&offset=..
     token: API_TOKEN (as defined in server.js)
 
 III. Current shortcomings and further optimization

@@ -6,3 +6,5 @@ package = Chat
 
 dependencies[] = og
 dependencies[] = realname
+
+configure = admin/config/people/chat

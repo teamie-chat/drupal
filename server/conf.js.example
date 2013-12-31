@@ -1,4 +1,3 @@
-// http://stackoverflow.com/questions/5625569/include-external-js-file-in-node-js-app
 function get() {
 	return {
 	    // MySQL configuration of the client Drupal site for which an instance of the chat application will be run.
@@ -16,11 +15,12 @@ function get() {
 		redis: {
 		  host: 'localhost',
 		  port: 6379,
-		  password: 'test',
+		  password: '',
 		  prefix: '' 
 		},
 		defaultPort: 8888,
-		apiToken: "myVerySecretToken"
+		apiToken: "myVerySecretToken",
+		maxChatMessagesPerRequest: 10
 	};
 }
 

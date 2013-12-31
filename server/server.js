@@ -1,5 +1,3 @@
-// @TODO Move image style, default profile image logic to the client as it's dependent less on the server and more on the connecting Drupal site.
-// @TODO Upload emoticons.
 // @TODO Move HTTP request handlers and API (DB and otherwise) methods to different files (api.js/http.js) so that they can be maintained easily and independently.
 
 var DEFAULT_CONFIG_FILE = './conf.js';
@@ -53,7 +51,6 @@ var THREAD_TYPE = {
   groupThread: 3
 };
 var MAX_RECENT_THREADS_PER_REQUEST = 10;
-var MAX_WEB_SERVICE_MESSAGES_PER_REQUEST = 100;
 var USER_STATUS ={offline:0, online:1};
 var NUM_OLD_MESSAGES_PER_REQUEST = 50;
 var REQUEST_TYPE = {
@@ -94,8 +91,6 @@ socketio = require('socket.io'),
 redis = require('redis'),
 cookie = require('cookie'),
 mysql = require('mysql');
-
-app.use(express.bodyParser());
 
 // Connect to Redis.
 var redisClient = redis.createClient(conf.redis.port,conf.redis.host,{no_ready_check: true});
@@ -859,57 +854,60 @@ sio.on('connection', function(client) {
   });
 });
 
-app.use(function(err, req, res, next) {
-  res.status(500);
-  res.render('error', { error: err });
-});
+app.use(express.bodyParser());
 
 app.get('/', function(req, res) {
-  res.sendfile(__dirname + '/index.html');
+  res.send(401);
 });
 
-//TODO: finish this api, authen token
-app.post('/api/recentThreads', function(req, res) {
-  var token = req.body.token,
-    uid = req.body.userId;
-
-  if(token === conf.apiToken){
-    if (isFinite(uid) && !isNaN(uid)){
-      uid = parseInt(uid);
-      getRecentThreads(uid,new Date().getTime() + 480,function(threads){
-        res.send(JSON.stringify(threads));
-      })
-    }else{
-      res.status(400);
-      res.send("invalid uid");
-    }
-  }else{
-    res.status(400);
-    res.send("wrong token");
-  }
+app.post('/ping', function(req, res) {
+	var sentToken;
+	if (!(sentToken = req.body.token)) {
+		res.send(400);
+	}
+	if (sentToken !== conf.apiToken) {
+		res.send(401);
+	}
+	res.send('pong');
 });
 
-app.post('/api/chatlog', function(req, res) {
-  try
-  {
-    var token = req.body.token,
-      offset = req.body.offset,
-      tid = req.body.tid;
-  }catch(e){
-    //bad request
-    res.status(400);
-    res.send("Invalid offset or tid");
-  }
+app.get('/api/user/:uid/threads', function (req, res) {
+	var token = req.query.token,
+		uid = req.params.uid;
+	if (!token || !uid) {
+		res.send(400);
+	}
+	if (token === conf.apiToken) {
+		if (isFinite(uid) && !isNaN(uid)) {
+			uid = parseInt(uid);
+			getRecentThreads(uid, new Date().getTime() + 480, function (threads) {
+				res.send(JSON.stringify(threads));
+			})
+		}
+		else {
+			res.send(400);
+		}
+	}
+	else {
+		res.send(401);
+	}
+});
 
-  if(token === conf.apiToken){
-    var start = offset;
-    var end = offset + MAX_WEB_SERVICE_MESSAGES_PER_REQUEST;
-    redisClient.lrange(tid,start,end, function(err, messages) {
-      if(err) console.log(err);
-      res.send(JSON.stringify(messages));
-    })
-  }else{
-    res.status(400);
-    res.send("wrong token");
-  }
+app.get('/api/thread/:threadId/messages', function (req, res) {
+	var token = req.query.token,
+		offset = req.query.offset || 10,
+		threadId = req.params.threadId;
+	if (!token || !threadId) {
+		res.send(400);
+	}
+	if (token == conf.apiToken) {
+		var start = offset;
+		var end = offset + conf.maxChatMessagesPerRequest;
+		redisClient.lrange(threadId, start, end, function (err, messages) {
+			res.send(JSON.stringify(messages));
+		})
+	}
+	else {
+		res.send(401);
+	}
 });
