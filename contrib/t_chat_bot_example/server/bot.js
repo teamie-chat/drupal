@@ -2,14 +2,14 @@
  *  Little example of how to use ```socket-io.client``` and ```request``` from node.js
  *  to authenticate thru http, and send the cookies during the socket.io handshake.
  */
- 
- // https://npmjs.org/package/socket.io-client
- // https://gist.github.com/jfromaniello/4087861
- // https://npmjs.org/package/request
- // https://npmjs.org/package/tough-cookie (used by request above)
- // http://publicsuffix.org/learn/ (why *.dev domains are rejected.)
- // https://npmjs.org/api/npm.html
- // http://nodejs.org/api/timers.html
+
+// https://npmjs.org/package/socket.io-client
+// https://gist.github.com/jfromaniello/4087861
+// https://npmjs.org/package/request
+// https://npmjs.org/package/tough-cookie (used by request above)
+// http://publicsuffix.org/learn/ (why *.dev domains are rejected.)
+// https://npmjs.org/api/npm.html
+// http://nodejs.org/api/timers.html
 
 var io = require('socket.io-client');
 var request = require('request');
@@ -17,16 +17,16 @@ var npm = require('npm');
 var fs = require('fs');
 
 try {
-var configJson = fs.readFileSync('./config.json');
+  var configJson = fs.readFileSync('./config.json');
 } catch (e) {
-  console.error('Missing config.json file. A config.json file must be placed in the same ' + 
-  'directory that this script is being run from. You can copy config.json.example and modify the same.');
+  console.error('Missing config.json file. A config.json file must be placed in the same ' +
+    'directory that this script is being run from. You can copy config.json.example and modify the same.');
   return;
 }
 
 var config = JSON.parse(configJson);
 
-npm.load(function() {  
+npm.load(function () {
   /*
    * This is the jar (like a cookie container) we will use always
    */
@@ -38,7 +38,7 @@ npm.load(function() {
    */
   var originalRequest = require('xmlhttprequest').XMLHttpRequest;
 
-  require(npm.prefix + '/node_modules/socket.io-client/node_modules/xmlhttprequest').XMLHttpRequest = function() {
+  require(npm.prefix + '/node_modules/socket.io-client/node_modules/xmlhttprequest').XMLHttpRequest = function () {
     originalRequest.apply(this, arguments);
     this.setDisableHeaderCheck(true);
     var stdOpen = this.open;
@@ -46,10 +46,10 @@ npm.load(function() {
     /*
      * I will patch now open in order to set my cookie from the jar request.
      */
-    this.open = function() {
+    this.open = function () {
       var that = this;
       stdOpen.apply(this, arguments);
-      var header = j.getCookies(config.DRUPAL_SITE_URL, function(err, cookies) {
+      var header = j.getCookies(config.DRUPAL_SITE_URL, function (err, cookies) {
         that.setRequestHeader('cookie', cookies.join(';'));
       });
     };
@@ -65,16 +65,16 @@ npm.load(function() {
     form: config.BOT
   }, function (err, resp, body) {
     var socket = io.connect(config.CHAT_SERVER_URL);
-    socket.on('connect', function() {
+    socket.on('connect', function () {
       console.log('Connected successfully!')
     });
     // Keep track of who you are replying too.
     var replyProcess = [];
-    socket.on('message', function(message) {
+    socket.on('message', function (message) {
       var message = JSON.parse(message);
-			var uid = config.BOT.uid;
-			var re = ('(1.1.thread:[0-9]{1,}:' + uid + '|1.1.thread:' + uid + ':[0-9]{1,})$');
-			re = new RegExp(re);
+      var uid = config.BOT.uid;
+      var re = ('(1.1.thread:[0-9]{1,}:' + uid + '|1.1.thread:' + uid + ':[0-9]{1,})$');
+      re = new RegExp(re);
       // Only supports 1-1 conversations for now.
       if ((message.responseType === 1) && (re.exec(message.threadId))) {
         var max = 4;
@@ -89,11 +89,11 @@ npm.load(function() {
         if (replyProcess[message.senderId]) {
           clearInterval(replyProcess[message.senderId]);
         }
-        var intervalId = setInterval(function() {
+        var intervalId = setInterval(function () {
           socket.send(JSON.stringify({
             requestType: 1,
             receiverId: message.senderId,
-            content: proverbs[i - 1], 
+            content: proverbs[i - 1],
             time: new Date().getTime()
           }));
           if (i === max) {
@@ -107,5 +107,5 @@ npm.load(function() {
         replyProcess[message.senderId] = intervalId;
       }
     });
-  });  
+  });
 });
