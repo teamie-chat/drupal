@@ -142,7 +142,9 @@ var chatClient = (function($, angular, io, drupalSettings) {
 						message.isChatBlock = scope.$parent.isFirstInSection(i, scope.messages);
 						message.relativeTimestamp = scope.getMsgBlockTimeStamp(i, scope.messages);
             message.absoluteTimestamp = scope.getFriendlyTimeString(message.time);
-            message.authorPictureUrl = scope.$parent.getUserPictureUrl(message.sender.image);
+            message.authorPictureUrl = message.sender ?
+							scope.$parent.getUserPictureUrl(message.sender.image) :
+							false;
 						scope.messages[i] = message;
 					}
 				});
