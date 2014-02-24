@@ -29,6 +29,7 @@ module.exports.getApiServer = function (conf, redisClient, core) {
       if (isFinite(uid) && !isNaN(uid)) {
         uid = parseInt(uid);
         core.getRecentThreads(uid, new Date().getTime() + 480, function (threads) {
+          res.set('Content-Type', 'application/json');
           res.send(JSON.stringify(threads));
         })
       }
@@ -52,6 +53,7 @@ module.exports.getApiServer = function (conf, redisClient, core) {
       var start = offset;
       var end = offset + conf.maxChatMessagesPerRequest;
       redisClient.lrange(threadId, start, end, function (err, messages) {
+        res.set('Content-Type', 'application/json');
         res.send(JSON.stringify(messages));
       })
     }
