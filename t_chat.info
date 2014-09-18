@@ -4,7 +4,7 @@ core = 7.x
 version = 7.x-1.0-dev
 package = Chat
 
-dependencies[] = og (=1.5)
+dependencies[] = og (7.x-1.5)
 dependencies[] = realname
 
 configure = admin/config/people/chat
