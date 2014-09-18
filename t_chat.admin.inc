@@ -48,7 +48,7 @@ function t_chat_admin() {
     '#title' => t('API token'),
     '#description' => t('This token is used to authenticate backend communication between this Drupal
       site and the nodeJS server application.'),
-    '#default_value' => drupal_get_hash_salt(),
+    '#default_value' => variable_get('t_chat_api_secret', drupal_get_hash_salt()),
     '#disabled' => 1
   );
 
@@ -117,7 +117,7 @@ function t_chat_admin_ping_server($form, &$form_state) {
     $server_url = rtrim($server_url, '/');
     $response = drupal_http_request($server_url . '/ping', array(
       'method' => 'POST',
-      'data' => http_build_query(array('token' => drupal_get_hash_salt())),
+      'data' => http_build_query(array('token' => variable_get('t_chat_api_secret', drupal_get_hash_salt()))),
       'headers' => array(
         'Content-Type' => 'application/x-www-form-urlencoded'
       )
